@@ -1,0 +1,13 @@
+{
+  "server-ip-addr": "192.168.128.3",           
+  "UDP-src-port": "9876",
+  "UDP-dest-port": "8765",
+  "TCP-dest-port-headSYN": "9999",
+  "TCP-dest-port-tailSYN": "8888",
+  "TCP-port-preProb": "7777",
+  "TCP-port-postProb": "6666",
+  "UDP-packet-size": "1000B",
+  "inter-time": "15",
+  "UDP-train-size": "6000",
+  "UDP-TTL": "255"
+}
