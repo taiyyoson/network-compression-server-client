@@ -4,30 +4,79 @@
 #include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-
+#include <time.h>
 #include <jansson.h>
+#define DEFAULT_LENGTH 22
 
-char *parseconfig[] (int count, char *input[]);
+typedef struct {
+    char key[DEFAULT_LENGTH];
+    char value[DEFAULT_LENGTH];
+} jsonLine;
+
+void parseconfig (jsonLine **arr, char *input[]);
+void est_TCP();
 
 int main(int argc, char *argv[]) {
     
-    char *config[] = parseconfig(argc, argv);
+    //parse given json file into struct
+    /*if (argc < 2) {
+        printf("missing JSON file in cmd line arg!");
+        return EXIT_FAILURE;
+    }*/
+    jsonLine *config = (jsonLine*) malloc(11 * sizeof(DEFAULT_LENGTH)*2);
 
-    //just use mass pseudocode to organiuze your thoughts bro, organize it in the same way vahab organized the 3 phases
+    parseconfig(&config, argv);
+    
+
+    //Pre-Probing TCP Connection Phase
+
+        //establish first tcp connection in function call
+            //establish_TCP();
+            //sends array of json structs to server (this is the msg)
+            //close connection
 
 
 
+    //Probing Phase
 
+        //create new socket for UDP packets, connects with server-side socket
+        //after socket is created, same function call twice (for loop for easy understanding)
+            //include a count, count = 0 is for low entropy, count = 1 is for high entropy
+            
+            //first time, set timer with inter_time
+                //while timer isn't == 0 (or packet count != 6000), run while loop
+                //to make and send UDP packets with all 0s buffer 
+            //second time, same thing, but:
+                //use urandom file to generate and send random packets, 6000
+
+        //close socket
+
+
+
+    //Post-Probing TCP Connection Phase
+        
+        //establish same tcp connection with same function call, same parameters,
+        //but this time server will return msg
+        //close connection
+
+        //based on msg, if (res == 0, printf("No compression detected")), if res == 1, then yes compression
+
+    //DONE with pt 1!
+    free(config);
     return 0;
 }
 
-char *parseconfig[] (int count, char *input[]) {
+void est_TCP() {
+
+}
+
+void parseconfig (jsonLine **arr, char *input[]) {
     int json_test = 1;
     //this is to test that .json parses correctly
-    FILE *fp = fopen(input[1], "r"); 
+    FILE *fp = fopen("../config.json", "r"); 
     if (!fp) {
         printf("No JSON file was given.");
-        return EXIT_FAILURE;
+        return;
     }
     fseek(fp, 0, SEEK_END);
     long file_size = ftell(fp);
@@ -42,25 +91,37 @@ char *parseconfig[] (int count, char *input[]) {
     free(json_buffer);
     if (!root) {
         printf("Failed to parse JSON\n");
-        return EXIT_FAILURE;
+        return;
     }
-    const char *server_ip_addr = json_string_value(json_object_get(root, "server_ip_addr"));
-    const char *UDP_src_port = json_string_value(json_object_get(root, "UDP_src_port"));
-    const char *UDP_dest_port = json_string_value(json_object_get(root, "UDP_dest_port"));
-    const char *TCP_dest_port_headSYN = json_string_value(json_object_get(root, "TCP_dest_port_headSYN"));
-    const char *TCP_dest_port_tailSYN = json_string_value(json_object_get(root, "TCP_dest_port_tailSYN"));
-    const char *TCP_port_preProb = json_string_value(json_object_get(root, "TCP_port_preProb"));
-    const char *TCP_port_postProb = json_string_value(json_object_get(root, "TCP_port_postProb"));
-    const char *UDP_packet_size = json_string_value(json_object_get(root, "UDP_packet_size"));
-    const char *inter_time = json_string_value(json_object_get(root, "inter_time"));
-    const char *UDP_train_size = json_string_value(json_object_get(root, "UDP_train_size"));
-    const char *UDP_TTL = json_string_value(json_object_get(root, "UDP_TTL"));
+    //storing values in struct array
+    **arr = {.key = "server_ip_addr", .value = json_string_value(json_object_get(root, "server_ip_addr"))};
+    (*arr)++;
+    **arr = {.key = "UDP_src_port", .value = json_string_value(json_object_get(root, "UDP_src_port"))};
+    (*arr)++;
+    **arr = {.key = "UDP_dest_port", .value = json_string_value(json_object_get(root, "UDP_dest_port"))};
+    (*arr)++;
+    **arr = {.key = "TCP_dest_port_headSYN", .value = json_string_value(json_object_get(root, "TCP_dest_port_headSYN"))};
+    (*arr)++;
+    **arr = {.key = "TCP_dest_port_tailSYN", .value = json_string_value(json_object_get(root, "TCP_dest_port_tailSYN"))};
+    (*arr)++;
+    **arr = {.key = "TCP_port_preProb", .value = json_string_value(json_object_get(root, "TCP_port_preProb"))};
+    (*arr)++;
+    **arr = {.key = "TCP_port_postProb", .value = json_string_value(json_object_get(root, "TCP_port_postProb"))};
+    (*arr)++;
+    **arr = {.key = "UDP_packet_size", .value = json_string_value(json_object_get(root, "UDP_packet_size"))};
+    (*arr)++;
+    **arr = {.key = "inter_time", .value = json_string_value(json_object_get(root, "inter_time"))};
+    (*arr)++;
+    **arr = {.key = "UDP_train_size", .value = json_string_value(json_object_get(root, "UDP_train_size"))};
+    (*arr)++;
+    **arr = {.key = "UDP_TTL", .value = json_string_value(json_object_get(root, "UDP_TTL"))};
     json_decref(root);
 
     //purely testing purposes
     if (json_test) 
-        printf("Sample JSON variable: %s", UDP_packet_size);
+        printf("Sample JSON variable: %c", *arr[0]->value);
 }
+
 
 
 
