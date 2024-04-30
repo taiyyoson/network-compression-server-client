@@ -94,34 +94,41 @@ void parseconfig (jsonLine **arr, char *input[]) {
         return;
     }
     //storing values in struct array
-    **arr = {.key = "server_ip_addr", .value = json_string_value(json_object_get(root, "server_ip_addr"))};
+    strcpy((**arr).key,"server_ip_addr");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "server_ip_addr")));
     (*arr)++;
-    **arr = {.key = "UDP_src_port", .value = json_string_value(json_object_get(root, "UDP_src_port"))};
+    strcpy((**arr).key,"UDP_src_port");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_src_port")));
     (*arr)++;
-    **arr = {.key = "UDP_dest_port", .value = json_string_value(json_object_get(root, "UDP_dest_port"))};
+    strcpy((**arr).key,"UDP_dest_port");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_dest_port")));
     (*arr)++;
-    **arr = {.key = "TCP_dest_port_headSYN", .value = json_string_value(json_object_get(root, "TCP_dest_port_headSYN"))};
+    strcpy((**arr).key,"TCP_dest_port_headSYN");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_dest_port_headSYN")));
     (*arr)++;
-    **arr = {.key = "TCP_dest_port_tailSYN", .value = json_string_value(json_object_get(root, "TCP_dest_port_tailSYN"))};
+    strcpy((**arr).key,"TCP_dest_port_tailSYN");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_dest_port_tailSYN")));
     (*arr)++;
-    **arr = {.key = "TCP_port_preProb", .value = json_string_value(json_object_get(root, "TCP_port_preProb"))};
+    strcpy((**arr).key,"TCP_port_preProb");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_port_preProb")));
     (*arr)++;
-    **arr = {.key = "TCP_port_postProb", .value = json_string_value(json_object_get(root, "TCP_port_postProb"))};
+    strcpy((**arr).key,"TCP_port_postProb");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_port_postProb")));
     (*arr)++;
-    **arr = {.key = "UDP_packet_size", .value = json_string_value(json_object_get(root, "UDP_packet_size"))};
+    strcpy((**arr).key,"UDP_packet_size");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_packet_size")));
     (*arr)++;
-    **arr = {.key = "inter_time", .value = json_string_value(json_object_get(root, "inter_time"))};
+    strcpy((**arr).key,"inter_time");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "inter_time")));
     (*arr)++;
-    **arr = {.key = "UDP_train_size", .value = json_string_value(json_object_get(root, "UDP_train_size"))};
+    strcpy((**arr).key,"UDP_train_size");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_train_size")));
     (*arr)++;
-    **arr = {.key = "UDP_TTL", .value = json_string_value(json_object_get(root, "UDP_TTL"))};
+    strcpy((**arr).key,"UDP_TTL");
+    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_TTL")));
     json_decref(root);
 
     //purely testing purposes
     if (json_test) 
-        printf("Sample JSON variable: %c", *arr[0]->value);
+        printf("Sample JSON variable: %s", (**arr).value);
 }
-
-
-
-

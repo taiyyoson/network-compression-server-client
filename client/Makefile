@@ -1,16 +1,12 @@
-CC = gcc
-CFLAGS = -std=c99 -g -ljansson
+PROG = cpq
+OBJS = client
 
-compdetect_client : client.c
-	$(CC) $(CFLAGS) -o client.c compdetect_client
-
-clean :
-	rm -rf $(PROG) $(OBJS) $(RESULT)    
-	rm -rf *.dSYM
-
-
-
-
+%.o : %.c 
+	gcc -c -g -o $@ $<
+$(PROG):$(OBJS).o
+	gcc -g -o $@ $^ -ljansson
+clean:
+	rm -rf $(OBJS).o $(PROG)
 
 #CC = gcc
 #FLAGS = -std=c99 -O0 -Wall -Werror -g -pedantic
