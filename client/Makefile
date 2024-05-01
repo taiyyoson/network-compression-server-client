@@ -1,4 +1,4 @@
-PROG = cpq
+PROG = compdetect_client
 OBJS = client
 
 %.o : %.c 

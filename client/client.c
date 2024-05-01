@@ -36,7 +36,6 @@ int main(int argc, char *argv[]) {
             //close connection
 
 
-
     //Probing Phase
 
         //create new socket for UDP packets, connects with server-side socket
@@ -44,11 +43,18 @@ int main(int argc, char *argv[]) {
             //include a count, count = 0 is for low entropy, count = 1 is for high entropy
             
             //first time, set timer with inter_time
+                //call function with socket
+                int count = 0;
+                int sockfd;
+                send_UDP(sockfd, count, config);
                 //while timer isn't == 0 (or packet count != 6000), run while loop
                 //to make and send UDP packets with all 0s buffer 
             //second time, same thing, but:
                 //use urandom file to generate and send random packets, 6000
+                count++;
+                send_UDP(sockfd, count, config);
 
+        
         //close socket
 
 
@@ -67,7 +73,44 @@ int main(int argc, char *argv[]) {
 }
 
 void est_TCP() {
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in server_addr;
+    char buffer[UDP_packet_size] = "Hello World";
 
+    if (sockfd == -1) {
+	    printf("ERROR opening socket");
+        return;
+    }
+
+
+
+}
+
+void send_UDP (int sock, int count, jsonLine *config) { 
+    //create buffer
+    char BUFFER[1000];
+    //if not count, low entropy payload
+    if (!count) {
+        //first time, set timer with inter_time
+                //call function with socket
+                //while timer isn't == 0 (or packet count != 6000), run while loop
+                //to make and send UDP packets with all 0s buffer 
+        //basic timer
+        int sec = 0, pak_count = 0;
+        clock_t before = clock();
+        do {
+            clock_t difference = clock() - before;
+            sec = difference / CLOCKS_PER_SEC;
+            //send UDP packets
+            
+            pak_count++;
+        } while (sec <= atoi(config[8]) && pak_count <= atoi(config[9])); //config[8] is variable that holds inter_time
+
+    }
+    //if count, high entropy payload
+    if (count) {
+
+    }
 }
 
 void parseconfig (jsonLine **arr, char *input[]) {
