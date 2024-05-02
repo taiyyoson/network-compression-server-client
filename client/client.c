@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
         printf("missing JSON file in cmd line arg!");
         return EXIT_FAILURE;
     }*/
-    jsonLine *config = (jsonLine*) malloc(11 * sizeof(DEFAULT_LENGTH)*2);
+    jsonLine *config;
 
     parseconfig(&config, argv);
     
@@ -46,13 +46,13 @@ int main(int argc, char *argv[]) {
                 //call function with socket
                 int count = 0;
                 int sockfd;
-                send_UDP(sockfd, count, config);
+                //send_UDP(sockfd, count, config);
                 //while timer isn't == 0 (or packet count != 6000), run while loop
                 //to make and send UDP packets with all 0s buffer 
             //second time, same thing, but:
                 //use urandom file to generate and send random packets, 6000
                 count++;
-                send_UDP(sockfd, count, config);
+                //send_UDP(sockfd, count, config);
 
         
         //close socket
@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
     free(config);
     return 0;
 }
-
+/*
 void est_TCP() {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     struct sockaddr_in server_addr;
@@ -111,9 +111,10 @@ void send_UDP (int sock, int count, jsonLine *config) {
     if (count) {
 
     }
-}
+}*/
 
 void parseconfig (jsonLine **arr, char *input[]) {
+    *arr = (jsonLine*) malloc(11 * sizeof(DEFAULT_LENGTH)*2);
     int json_test = 1;
     //this is to test that .json parses correctly
     FILE *fp = fopen("../config.json", "r"); 
