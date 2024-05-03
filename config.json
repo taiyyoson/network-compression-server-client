@@ -6,7 +6,7 @@
   "TCP_dest_port_tailSYN": "8888",
   "TCP_port_preProb": "7777",
   "TCP_port_postProb": "6666",
-  "UDP_packet_size": "1000B",
+  "UDP_packet_size": "1000",
   "inter_time": "15",
   "UDP_train_size": "6000",
   "UDP_TTL": "255"

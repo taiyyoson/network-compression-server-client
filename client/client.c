@@ -7,52 +7,77 @@
 #include <time.h>
 #include <jansson.h>
 #define DEFAULT_LENGTH 22
+#define ADDR_LEN 14
+#define ITEMS 11
+#define BUFFER_MAX 1024
 
+//note: i forgot, but for either TCP or UDP, isn't there a prat where we create a new socket?
 typedef struct {
-    char key[DEFAULT_LENGTH];
-    char value[DEFAULT_LENGTH];
+    char *key;
+    const char *value;
 } jsonLine;
 
-void parseconfig (jsonLine **arr, char *input[]);
-void est_TCP();
+json_t *json_init(char *input[]);
+char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post);
+void send_UDP (jsonLine *items);
 
 int main(int argc, char *argv[]) {
-    
     //parse given json file into struct
-    /*if (argc < 2) {
+    if (argc < 2) {
         printf("missing JSON file in cmd line arg!");
         return EXIT_FAILURE;
-    }*/
-    jsonLine *config;
-
-    parseconfig(&config, argv);
+    }
+    json_t *root = json_init(argv);
+    jsonLine config[ITEMS] = {
+      {"server_ip_addr", json_string_value(json_object_get(root, "server_ip_addr"))},
+      {"UDP_src_port", json_string_value(json_object_get(root, "UDP_src_port"))},
+      {"UDP_dest_port", json_string_value(json_object_get(root, "UDP_dest_port"))},
+      {"TCP_dest_port_headSYN", json_string_value(json_object_get(root, "TCP_dest_port_headSYN"))},
+      {"TCP_dest_port_tailSYN", json_string_value(json_object_get(root, "TCP_dest_port_tailSYN"))},
+      {"TCP_port_preProb", json_string_value(json_object_get(root, "TCP_port_preProb"))},
+      {"TCP_port_postProb", json_string_value(json_object_get(root, "TCP_port_postProb"))},
+      {"UDP_packet_size", json_string_value(json_object_get(root, "UDP_packet_size"))},
+      {"inter_time", json_string_value(json_object_get(root, "inter_time"))},
+      {"UDP_train_size", json_string_value(json_object_get(root, "UDP_train_size"))},
+      {"UDP_TTL", json_string_value(json_object_get(root, "UDP_TTL"))}
+    };
+    printf("%s: %s\n", config[0].value, config[0].key);
+    
     
 
     //Pre-Probing TCP Connection Phase
 
-        //establish first tcp connection in function call
-            //establish_TCP();
+    //establish first tcp connection in function call
+        //establish_TCP();
             //sends array of json structs to server (this is the msg)
             //close connection
-
+    int pre_post = 1;
+    char buffer[BUFFER_MAX];
+    for (int i=0; i < ITEMS; i++) {
+        strcat(buffer,config[i].key);
+        strcat(buffer,":");
+        strcat(buffer,config[i].value);
+        strcat(buffer, ",");
+    }
+    //printf("%s",buffer);
+    char *addr;
+    strcpy(addr, config[0].value);
+    //printf("%s", addr);
+    int port[2] = {atoi(config[5].value), atoi(config[6].value)};
+    char *placeholder = est_TCP(buffer, port, addr, pre_post);
 
     //Probing Phase
 
         //create new socket for UDP packets, connects with server-side socket
-        //after socket is created, same function call twice (for loop for easy understanding)
-            //include a count, count = 0 is for low entropy, count = 1 is for high entropy
-            
             //first time, set timer with inter_time
                 //call function with socket
-                int count = 0;
-                int sockfd;
-                //send_UDP(sockfd, count, config);
+                int high_low_entropy = 0;
+                send_UDP(config);
                 //while timer isn't == 0 (or packet count != 6000), run while loop
                 //to make and send UDP packets with all 0s buffer 
             //second time, same thing, but:
                 //use urandom file to generate and send random packets, 6000
-                count++;
-                //send_UDP(sockfd, count, config);
+
 
         
         //close socket
@@ -63,70 +88,133 @@ int main(int argc, char *argv[]) {
         
         //establish same tcp connection with same function call, same parameters,
         //but this time server will return msg
+        pre_post = 0;
         //close connection
 
         //based on msg, if (res == 0, printf("No compression detected")), if res == 1, then yes compression
 
     //DONE with pt 1!
-    free(config);
+    json_decref(root);
     return 0;
 }
-/*
-void est_TCP() {
-    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    struct sockaddr_in server_addr;
-    char buffer[UDP_packet_size] = "Hello World";
 
-    if (sockfd == -1) {
+char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
+    int sockfd, connfd;
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
 	    printf("ERROR opening socket");
-        return;
+        exit(0);
+    }
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    if (pre_post)
+        server_addr.sin_port = htons(PORT[0]);
+    else
+        server_addr.sin_port = htons(PORT[1]);
+    server_addr.sin_addr.s_addr = inet_addr(ADDR);
+
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
+        printf("ERROR connecting with the server using socket!");
+        exit(0);
     }
 
+    //sending/receiving messages here
+    //if pre_post is 1, then in pre_probing phase, client sends data (json), if pre_post is 0, then in post_probe, server returns data
+    if (pre_post) {
+        int count1 = send(sockfd, BUFFER, BUFFER_MAX, 0);
+        if (count1 == -1) {
+            printf("error sending message to server");
+            exit(0);
+        }
+    }
+    else {
+        char msg[BUFFER_MAX];
+        int count2 = recv(sockfd, msg, BUFFER_MAX, 0);
+        if (count2 == -1) {
+            printf("error receiving message from server");
+            exit(0);
+        }
+        return msg;
+    }
 
-
+    close(sockfd);
+    return NULL;
 }
 
-void send_UDP (int sock, int count, jsonLine *config) { 
+
+
+void send_UDP (jsonLine *items) { 
+    //create socket
+    int sockfd;
+    if (sockfd = socket(AF_INET, SOCK_DGRAM, 0) == -1) {
+        printf("Error making UDP socket");
+        return;
+    }
+    struct sockaddr_in sin;
+    memset(&sin, 0, sizeof(sin));
+    sin.sin_family = AF_INET;
+    sin.sin_port = htons(atoi(items[2].value));
+    sin.sin_addr.s_addr = inet_addr(items[0].value);
+
+
     //create buffer
-    char BUFFER[1000];
-    //if not count, low entropy payload
-    if (!count) {
-        //first time, set timer with inter_time
-                //call function with socket
-                //while timer isn't == 0 (or packet count != 6000), run while loop
-                //to make and send UDP packets with all 0s buffer 
-        //basic timer
-        int sec = 0, pak_count = 0;
+    int packet_size = atoi(items[7].value);
+    int train_size = atoi(items[9].value);
+    int inter_time = atoi(items[8].value);
+    char low_entropy_BUFFER[packet_size];
+    memset(low_entropy_BUFFER, 0, packet_size);
+    //first time, set timer with inter_time
+            //while timer isn't == 0 (or packet count != 6000), run while loop
+            //to make and send UDP packets with all 0s buffer 
+    //basic timer
+        int sec = 0, pak_count = 0, true_count = 0;
         clock_t before = clock();
         do {
             clock_t difference = clock() - before;
             sec = difference / CLOCKS_PER_SEC;
-            //send UDP packets
-            
+            //send UDP packet (6000 times haha)
+            if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
+                printf("packet failed to send");
+            else 
+                true_count++;
             pak_count++;
-        } while (sec <= atoi(config[8]) && pak_count <= atoi(config[9])); //config[8] is variable that holds inter_time
+        } while ((sec <= inter_time) && (pak_count <= train_size)); //items[8] is variable that holds inter_time
+        printf("true_count: %d and pak_count: %d. Client/server lost %d packets from the low entropy payload", true_count, pak_count, pak_count - true_count);
+    
+    //second time, restart before timer and new difference timer
+        //make random packet_data using random_file in ../dir
+        char high_entropy_BUFFER[packet_size];
 
-    }
-    //if count, high entropy payload
-    if (count) {
 
-    }
-}*/
+        sec = 0, pak_count = 0, true_count = 0;
+        clock_t before = clock();
+        do {
+            clock_t difference = clock() - before;
+            sec = difference / CLOCKS_PER_SEC;
+            //send UDP packet (6000 times again)
+            if (sendto(sockfd, high_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
+                printf("packet failed to send");
+            else 
+                true_count++;
+            pak_count++;
+        } while ((sec <= inter_time) && (pak_count <= train_size));
+        printf("true_count: %d and pak_count: %d. Client/server lost %d packets from the high entropy payload", true_count, pak_count, pak_count - true_count);
+    close(sockfd);
+}
 
-void parseconfig (jsonLine **arr, char *input[]) {
-    *arr = (jsonLine*) malloc(11 * sizeof(DEFAULT_LENGTH)*2);
+json_t *json_init (char *input[]) {
     int json_test = 1;
     //this is to test that .json parses correctly
-    FILE *fp = fopen("../config.json", "r"); 
+    FILE *fp = fopen(input[1], "r"); 
     if (!fp) {
         printf("No JSON file was given.");
-        return;
+        return NULL;
     }
     fseek(fp, 0, SEEK_END);
     long file_size = ftell(fp);
-    fseek (fp, 0, SEEK_SET);
+    fseek(fp, 0, SEEK_SET);
 
-    char *json_buffer = (char*) malloc(file_size);
+    char *json_buffer = malloc(file_size);
     fread(json_buffer, 1, file_size, fp);
     fclose(fp);
 
@@ -134,45 +222,9 @@ void parseconfig (jsonLine **arr, char *input[]) {
     json_t *root = json_loads(json_buffer, 0, &error);
     free(json_buffer);
     if (!root) {
-        printf("Failed to parse JSON\n");
-        return;
+        fprintf(stderr, "Failed to parse JSON: %s\n", error.text);
+        return NULL;
     }
-    //storing values in struct array
-    strcpy((**arr).key,"server_ip_addr");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "server_ip_addr")));
-    (*arr)++;
-    strcpy((**arr).key,"UDP_src_port");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_src_port")));
-    (*arr)++;
-    strcpy((**arr).key,"UDP_dest_port");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_dest_port")));
-    (*arr)++;
-    strcpy((**arr).key,"TCP_dest_port_headSYN");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_dest_port_headSYN")));
-    (*arr)++;
-    strcpy((**arr).key,"TCP_dest_port_tailSYN");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_dest_port_tailSYN")));
-    (*arr)++;
-    strcpy((**arr).key,"TCP_port_preProb");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_port_preProb")));
-    (*arr)++;
-    strcpy((**arr).key,"TCP_port_postProb");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "TCP_port_postProb")));
-    (*arr)++;
-    strcpy((**arr).key,"UDP_packet_size");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_packet_size")));
-    (*arr)++;
-    strcpy((**arr).key,"inter_time");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "inter_time")));
-    (*arr)++;
-    strcpy((**arr).key,"UDP_train_size");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_train_size")));
-    (*arr)++;
-    strcpy((**arr).key,"UDP_TTL");
-    strcpy((**arr).value,json_string_value(json_object_get(root, "UDP_TTL")));
-    json_decref(root);
-
-    //purely testing purposes
-    if (json_test) 
-        printf("Sample JSON variable: %s", (**arr).value);
+    
+    return root;
 }

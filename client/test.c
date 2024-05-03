@@ -1,12 +1,21 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <jansson.h>
+#define SIZE 4
 
+void running(char *input[]);
 int main(int argc, char *argv[]) {
+
+    running(argv);
+
+    return 0;
+}
+void running (char *input[]) {
     // Open the JSON file
-    FILE *fp = fopen(argv[1], "r");
+    FILE *fp = fopen(input[1], "r");
     if (!fp) {
         fprintf(stderr, "Failed to open file\n");
-        return 1;
+        return;
     }
 
     // Read the contents of the JSON file
@@ -23,14 +32,14 @@ int main(int argc, char *argv[]) {
     free(json_buffer);
     if (!root) {
         fprintf(stderr, "Failed to parse JSON: %s\n", error.text);
-        return 1;
+        return;
     }
 
     // Extract data from JSON
     const char *name = json_string_value(json_object_get(root, "server_ip_addr"));
     const char *age = json_string_value(json_object_get(root, "UDP_src_port"));
-    const char *address = json_string_value(json_object_get(root, "UDP_dest_port"));
-
+    const char *address = json_string_value(json_object_get(root, "UDP_TTL"));
+    
     // Print the extracted data
     printf("Name: %s\n", name);
     printf("Age: %s\n", age);
@@ -38,6 +47,4 @@ int main(int argc, char *argv[]) {
 
     // Cleanup
     json_decref(root);
-
-    return 0;
 }

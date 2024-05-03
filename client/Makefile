@@ -1,5 +1,7 @@
 PROG = compdetect_client
 OBJS = client
+#PROG = tester
+#OBJS = test
 
 %.o : %.c 
 	gcc -c -g -o $@ $<
