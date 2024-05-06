@@ -5,11 +5,20 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <time.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+
 #define PRE_PORT  7777
 #define POST_PORT 6666
 #define BUFFER_MAX 1024
+#define ITEMS 11
 
-void rec_UDP ();
+typedef struct {
+    char *key;
+    const char *value;
+} jsonLine;
+
+int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME);
 char *est_TCP (int pre_post, int detect);
 int main (int argc, char *argv[]) {
 
@@ -21,9 +30,38 @@ int main (int argc, char *argv[]) {
     int temp = 0;
     char *msg = est_TCP(pre_post, temp);
 
+    jsonLine items[ITEMS];
+
+    char delim[2] = ",";
+    char indelim[2] = ":";
+    char* token;
+    char* token2;
+
+
+    token = strtok(msg, delim);
+
+    int i=0;
+    while((token != NULL) && (i < ITEMS)) {
+        token2 = strtok(token, indelim);
+        while (token2 != NULL) {
+            strcpy(items[i].key, token2);
+            token2 = strtok(NULL, indelim);
+            strcpy(items[i].value, token2);
+        }
+        token = strtok(NULL, delim);
+        i++;
+    }
+   
+
 
 
     //Probing Phase
+    int dest_port = atoi(items[2].value);
+    int src_port = atoi(items[1].value);
+    int inter_time = atoi(items[8].value);
+    int detect = rec_UDP(src_port, dest_port, inter_time);
+
+
 
     //connections now been established
     //start inter_time, same time as client
@@ -50,6 +88,8 @@ int main (int argc, char *argv[]) {
 
 
     //Post-Probing TCP Connection Phase
+    pre_post = 0;
+    char* placeholder = est_TCP(pre_post, detect);
 
     return EXIT_SUCCESS;
 }
@@ -113,6 +153,60 @@ char *est_TCP(int pre_post, int detect) {
     return NULL;
 }
 
-void rec_UDP() {
-    
+int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
+    int sockfd;
+    struct sockaddr_in server_addr, client_addr;
+    client_addr.sin_port = htons(SRC_PORT);
+    socklen_t client_len = sizeof(client_addr);
+    char buffer[BUFFER_MAX];
+
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0) < 0)) {
+        printf("error with creating socket");
+        exit(0);
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(SERVER_PORT);
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) {
+        printf("bind failed");
+        exit(0);
+    }
+
+    printf("Server is starting listen() for UDP packets");
+    //LOW ENTROPY PAYLOAD
+    //first received UDP packet
+
+    int rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
+    float sec = 0;
+    int rec_last;
+    clock_t before = clock();
+        do {
+            clock_t difference = clock() - before;
+            sec = difference / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && sec <= INTER_TIME);
+
+    clock_t after = clock() - before;
+    float low_entropy = after;
+
+    //HIGH ENTROPY PAYLOAD
+    sec = 0;
+    rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
+    before = clock();
+        do {
+            clock_t difference = clock() - before;
+            sec = difference / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && sec <= INTER_TIME);
+
+    clock_t after2 = clock() - before;
+    float high_entropy = after2;
+
+    if ((high_entropy - low_entropy) >= 0.1) {
+        return 1;
+    }
+    else {
+        return 0;
+    }
+
 }
