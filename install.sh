@@ -1,5 +1,5 @@
 #!/bin/sh
-cd jansson-2.13
+cd jansson-2.14
 ./configure
 make
 make check
