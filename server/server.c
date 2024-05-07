@@ -36,10 +36,7 @@ int main (int argc, char *argv[]) {
     char indelim[2] = ":";
     char* token;
     char* token2;
-
-
     token = strtok(msg, delim);
-
     int i=0;
     while((token != NULL) && (i < ITEMS)) {
         token2 = strtok(token, indelim);
@@ -100,7 +97,7 @@ char *est_TCP(int pre_post, int detect) {
     struct sockaddr_in addr;
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket failed");
+        perror("socket fail\n");
         exit(EXIT_FAILURE);
     }
     memset(&addr, 0, sizeof(addr));
@@ -112,12 +109,12 @@ char *est_TCP(int pre_post, int detect) {
         addr.sin_port = htons(POST_PORT);
 
     if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        printf("cannot bind socket to address");
+        printf("cannot bind socket to address\n");
         exit(0);
     }
 
     if (listen(sockfd, 1) < 0) {
-        printf("error listening");
+        printf("error listening\n");
         exit(0);
     }
     struct sockaddr_in server_addr;
@@ -125,7 +122,7 @@ char *est_TCP(int pre_post, int detect) {
     socklen_t addr_len = sizeof(server_addr);
     client_sock = accept(sockfd, (struct sockaddr *)&server_addr, &addr_len);
     if (client_sock < 0) {
-        printf("error accepting connection");
+        printf("error accepting connection\n");
         exit(0);
     }
 
@@ -133,15 +130,15 @@ char *est_TCP(int pre_post, int detect) {
         int received;
         char *BUFFER = (char *) malloc(sizeof(char) * BUFFER_MAX);
         if ((received = recv(sockfd, BUFFER, BUFFER_MAX,0) < 0)) {
-            printf("recv() failed");
+            printf("recv() failed\n");
         }
         else if (received == 0) {
-            printf("sender has closed connection");
+            printf("sender has closed connection\n");
         }
         else {
-            printf("received successfully!");
-            return BUFFER;
+            printf("received successfully!\n");
         }
+        return BUFFER;
     }
     else {
         char *BUFFER2 = (char *) malloc(sizeof(char) * BUFFER_MAX);
@@ -149,9 +146,10 @@ char *est_TCP(int pre_post, int detect) {
         sprintf(BUFFER2, "%d", detect);
         int count1 = send(sockfd, BUFFER2, BUFFER_MAX, 0);
         if (count1 == -1) {
-            printf("error sending message to client");
+            printf("error sending message to client\n");
             exit(0);
         }
+        return BUFFER2;
     }
     return NULL;
 }
@@ -164,7 +162,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     char buffer[BUFFER_MAX];
 
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0) < 0)) {
-        printf("error with creating socket");
+        printf("error with creating socket\n");
         exit(0);
     }
 
@@ -173,7 +171,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(SERVER_PORT);
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) {
-        printf("bind failed");
+        printf("bind failed\n");
         exit(0);
     }
 

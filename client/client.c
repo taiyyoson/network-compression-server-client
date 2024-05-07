@@ -14,6 +14,11 @@
 #define ITEMS 11
 #define BUFFER_MAX 1024
 
+/***
+ * Things that could go wrong:
+ * -  
+ */
+
 typedef struct {
     char *key;
     const char *value;
@@ -26,7 +31,7 @@ void send_UDP (jsonLine *items);
 int main(int argc, char *argv[]) {
    //parse given json file into struct
     if (argc < 2) {
-        printf("missing JSON file in cmd line arg!");
+        printf("missing JSON file in cmd line arg!\n");
         return EXIT_FAILURE;
     }
     json_t *root = json_init(argv);
@@ -43,7 +48,6 @@ int main(int argc, char *argv[]) {
       {"UDP_train_size", json_string_value(json_object_get(root, "UDP_train_size"))},
       {"UDP_TTL", json_string_value(json_object_get(root, "UDP_TTL"))}
     };
-    printf("%s: %s\n", config[0].value, config[0].key);
     
     
 
@@ -105,9 +109,9 @@ int main(int argc, char *argv[]) {
 }
 
 char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
-    int sockfd, connfd;
+    int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-	    printf("ERROR opening socket");
+	    printf("ERROR opening socket\n");
         exit(0);
     }
     struct sockaddr_in server_addr;
@@ -120,7 +124,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
     server_addr.sin_addr.s_addr = inet_addr(ADDR);
 
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-        printf("ERROR connecting with the server using socket!");
+        printf("ERROR connecting with the server using socket!\n");
         exit(0);
     }
 
@@ -129,7 +133,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
     if (pre_post) {
         int count1 = send(sockfd, BUFFER, BUFFER_MAX, 0);
         if (count1 == -1) {
-            printf("error sending message to server");
+            printf("error sending message to server\n");
             exit(0);
         }
     }
@@ -137,7 +141,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
         char *msg = (char *) malloc(sizeof(char) * BUFFER_MAX);
         int count2 = recv(sockfd, msg, BUFFER_MAX, 0);
         if (count2 == -1) {
-            printf("error receiving message from server");
+            printf("error receiving message from server\n");
             exit(0);
         }
         return msg;
@@ -151,14 +155,15 @@ void send_UDP (jsonLine *items) {
     //create socket
     int sockfd;
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
-        printf("Error making UDP socket");
-        return;
+        printf("Error making UDP socket\n");
+        exit(EXIT_FAILURE);
     }
 
     //set DF bit
     int dfval = 1;
     if (setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAG, &dfval, sizeof(dfval)) < 0) {
-        printf("error with setting don't fragment bit");
+        printf("error with setting don't fragment bit\n");
+        exit(EXIT_FAILURE);
     }
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
@@ -174,7 +179,7 @@ void send_UDP (jsonLine *items) {
     char low_entropy_BUFFER[packet_size];
     memset(low_entropy_BUFFER, 0, packet_size);
     //first time, set timer with inter_time
-            //while timer isn't == 0 (or packet count != 6000), run while loop
+            //while timer isn't == inter_time (or packet count != 6000), run while loop
             //to make and send UDP packets with all 0s buffer 
     //basic timer
         float sec = 0;
@@ -187,12 +192,9 @@ void send_UDP (jsonLine *items) {
             low_entropy_BUFFER[0] = pak_count & 0xFF;
             low_entropy_BUFFER[1] = pak_count & 0xFF;
             if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
-                printf("packet failed to send");
-            else 
-                true_count++;
+                printf("packet failed to send\n");
             pak_count++;
-        } while ((sec <= inter_time) && (pak_count <= train_size)); //items[8] is variable that holds inter_time
-        printf("true_count: %d and pak_count: %d. Client/server lost %d packets from the low entropy payload", true_count, pak_count, pak_count - true_count);
+        } while ((sec <= inter_time) && (pak_count <= train_size));
     
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
@@ -214,13 +216,9 @@ void send_UDP (jsonLine *items) {
             high_entropy_BUFFER[1] = pak_count & 0xFF;
             //send UDP packet (6000 times again)
             if (sendto(sockfd, high_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
-                printf("packet failed to send");
-            else 
-                true_count++;
+                printf("packet failed to send\n");
             pak_count++;
         } while ((sec <= inter_time) && (pak_count <= train_size));
-        printf("true_count: %d and pak_count: %d. Client/server lost %d packets from the high entropy payload", true_count, pak_count, pak_count - true_count);
-    
     close(sockfd);
 }
 
