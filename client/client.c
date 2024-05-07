@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <sys/socket.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -96,6 +97,7 @@ int main(int argc, char *argv[]) {
             printf("FINAL: Network compression detected!");
         else    
             printf("FINAL: Network compression NOT detected!");
+        free(res);
 
     //DONE with pt 1!
     json_decref(root);
@@ -132,7 +134,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
         }
     }
     else {
-        char msg[BUFFER_MAX];
+        char *msg = (char *) malloc(sizeof(char) * BUFFER_MAX);
         int count2 = recv(sockfd, msg, BUFFER_MAX, 0);
         if (count2 == -1) {
             printf("error receiving message from server");
@@ -148,7 +150,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
 void send_UDP (jsonLine *items) { 
     //create socket
     int sockfd;
-    if (sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) == -1) {
+    if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         printf("Error making UDP socket");
         return;
     }
@@ -204,7 +206,7 @@ void send_UDP (jsonLine *items) {
         
 
         sec = 0, pak_count = 0, true_count = 0;
-        clock_t before = clock();
+        before = clock();
         do {
             clock_t difference = clock() - before;
             sec = difference / CLOCKS_PER_SEC;

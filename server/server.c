@@ -15,7 +15,7 @@
 
 typedef struct {
     char *key;
-    const char *value;
+    char *value;
 } jsonLine;
 
 int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME);
@@ -91,6 +91,8 @@ int main (int argc, char *argv[]) {
     pre_post = 0;
     char* placeholder = est_TCP(pre_post, detect);
 
+    free(msg);
+    free(placeholder);
     return EXIT_SUCCESS;
 }
 
@@ -119,7 +121,8 @@ char *est_TCP(int pre_post, int detect) {
         exit(0);
     }
     struct sockaddr_in server_addr;
-    int client_sock, addr_len = sizeof(server_addr);
+    int client_sock;
+    socklen_t addr_len = sizeof(server_addr);
     client_sock = accept(sockfd, (struct sockaddr *)&server_addr, &addr_len);
     if (client_sock < 0) {
         printf("error accepting connection");
@@ -128,7 +131,7 @@ char *est_TCP(int pre_post, int detect) {
 
     if (pre_post) {
         int received;
-        char *BUFFER[BUFFER_MAX];
+        char *BUFFER = (char *) malloc(sizeof(char) * BUFFER_MAX);
         if ((received = recv(sockfd, BUFFER, BUFFER_MAX,0) < 0)) {
             printf("recv() failed");
         }
@@ -141,7 +144,7 @@ char *est_TCP(int pre_post, int detect) {
         }
     }
     else {
-        char *BUFFER2[2];
+        char *BUFFER2 = (char *) malloc(sizeof(char) * BUFFER_MAX);
         //copying server's findings to buffer, sending buffer back to client (will only be either 1 or 0)
         sprintf(BUFFER2, "%d", detect);
         int count1 = send(sockfd, BUFFER2, BUFFER_MAX, 0);
