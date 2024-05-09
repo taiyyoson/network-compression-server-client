@@ -142,6 +142,8 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
             printf("error sending message to client\n");
             exit(0);
         }
+        else 
+            printf("Sent result to client!\n");
         return BUFFER2;
     }
     //edge case
@@ -219,6 +221,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     //stop timer
     clock_t after = clock() - before;
     float low_entropy = after;
+    printf("Received low entropy payload! Time is: %f\n", low_entropy);
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
     sec = 0;
@@ -233,6 +236,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
 
     clock_t after2 = clock() - before;
     float high_entropy = after2;
+    printf("Received high entropy payload! Time is: %f\n", high_entropy);
     
     //#define 0.1 as the threshold
     if ((high_entropy - low_entropy) >= 0.1) {
