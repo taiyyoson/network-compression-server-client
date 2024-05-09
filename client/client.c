@@ -137,7 +137,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
     else
         server_addr.sin_port = htons(PORT[1]);
     if (!(inet_pton(AF_INET, ADDR, &(server_addr.sin_addr)) > 0)) {
-        printf("client.c 148: ERROR assigning address to socket");
+        printf("client.c 148: ERROR assigning address to socket\n");
         exit(EXIT_FAILURE);
     }
 
@@ -168,7 +168,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
             exit(0);
         }
         else    
-            printf("Received message from server!");
+            printf("Received message from server!\n");
         return msg;
     }
 
@@ -186,8 +186,8 @@ void send_UDP (jsonLine *items) {
     }
 
     //set DF bit
-    int dfval = 1;
-    if (setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAG, &dfval, sizeof(dfval)) < 0) { //if linux, use IP_MTU_DISCOVER & IP_PMTUDISC_DO
+    int dfval = IP_PMTUDISC_DO; //linux df bit
+    if (setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dfval, sizeof(dfval)) < 0) { //if linux, use IP_MTU_DISCOVER & IP_PMTUDISC_DO
         printf("error with setting don't fragment bit\n");
         exit(EXIT_FAILURE);
     }
@@ -198,7 +198,7 @@ void send_UDP (jsonLine *items) {
     sin.sin_family = AF_INET;
     sin.sin_port = htons(atoi(items[2].value));
     if (!(inet_pton(AF_INET, items[0].value, &(sin.sin_addr)) > 0)) {
-        printf("client.c 209: ERROR assigning address to socket");
+        printf("client.c 209: ERROR assigning address to socket\n");
         exit(EXIT_FAILURE);
     }
 
@@ -229,7 +229,7 @@ void send_UDP (jsonLine *items) {
                 printf("packet failed to send\n");
             pak_count++;
         } while ((sec <= inter_time) && (pak_count <= train_size));
-        printf("Low entropy payload sent!");
+        printf("Low entropy payload sent!\n");
     
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
@@ -254,7 +254,7 @@ void send_UDP (jsonLine *items) {
                 printf("packet failed to send\n");
             pak_count++;
         } while ((sec <= inter_time) && (pak_count <= train_size));
-        printf("High entropy payload sent!");
+        printf("High entropy payload sent!\n");
     close(sockfd);
 }
 
