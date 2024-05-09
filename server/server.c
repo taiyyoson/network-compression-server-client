@@ -13,10 +13,10 @@
 #include <netinet/udp.h>
 
 //global constants, hard-coding ports rather than command-line arguments
-#define PRE_PORT  7777
-#define POST_PORT 6666
+#define PRE_TCP_PORT 7777
 #define BUFFER_MAX 1024
 #define ITEMS 11
+
 
 //struct to hold json line items
 typedef struct {
@@ -25,7 +25,7 @@ typedef struct {
 } jsonLine;
 
 int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME); //server_side, receives UDP packets, calculates difference in times, returns bool of whether network compression or not
-char *est_TCP (int pre_post, int detect); //handles everything to establish TCP connection and store JSON file in form of char buffer
+char *est_TCP (int pre_post, int detect, int PRE_PORT, int POST_PORT); //handles everything to establish TCP connection and store JSON file in form of char buffer
 
 int main (int argc, char *argv[]) {
 
@@ -33,27 +33,24 @@ int main (int argc, char *argv[]) {
     int pre_post = 1;
     int temp = 0;
     //serialized buffer containing config.json
-    char *msg = est_TCP(pre_post, temp);
+    char *msg = est_TCP(pre_post, temp, PRE_TCP_PORT, 1234); //1234 is a placeholder, it's not actually used in this instance call
     jsonLine items[ITEMS]; //will store config.json in here
 
-    //using nested strtok to completely split the serialized buffer
-    char delim[2] = ",";
-    char indelim[2] = ":";
-    char* token;
-    char* token2;
-    token = strtok(msg, delim);
-    int i=0;
-    while((token != NULL) && (i < ITEMS)) {
-        token2 = strtok(token, indelim);
-        while (token2 != NULL) {
-            strcpy(items[i].key, token2);
-            token2 = strtok(NULL, indelim);
-            strcpy(items[i].value, token2);
-        }
-        token = strtok(NULL, delim);
+    char *token;
+    int i =0;
+    //parsing message to use server config info
+    token = strtok(msg, ":");
+    while (token != NULL) {
+        (items + i)->key = token;
+        printf("%s\n", token);
+        token = strtok(NULL, ":");
+        (items + i)->value = token;
+        printf("%s\n", token);
+        token = strtok(NULL, ":");
         i++;
     }
-   
+
+    //printf("%s\n", items[0].value);
 
     //Probing Phase
     //initializing values
@@ -61,12 +58,14 @@ int main (int argc, char *argv[]) {
     int src_port = atoi(items[1].value);
     int inter_time = atoi(items[8].value);
     int detect = rec_UDP(src_port, dest_port, inter_time); //detect holds data that will be sent back to client
+    int TCP_pre_port = atoi(items[5].value);
+    int TCP_post_port = atoi(items[6].value);
 
 
     //Post-Probing TCP Connection Phase
     //pre_post == 0 means program knows to send data, not receive in this TCP connection
     pre_post = 0;
-    char* placeholder = est_TCP(pre_post, detect); //sends detect back to client, who decodes and returns output
+    char* placeholder = est_TCP(pre_post, detect, TCP_pre_port, TCP_post_port); //sends detect back to client, who decodes and returns output
 
     //free malloc'd memory
     free(msg);
@@ -74,7 +73,7 @@ int main (int argc, char *argv[]) {
     return EXIT_SUCCESS;
 }
 
-char *est_TCP(int pre_post, int detect) {
+char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
     //similar logic to in client.c
 
     //creating socket

@@ -49,9 +49,44 @@ int main(int argc, char *argv[]) {
         strcat(buffer,config[i].value);
         if (i == 10)
             break;
-        strcat(buffer, ",");
+        strcat(buffer, ":");
+    }
+    printf("%s\n", buffer);
+
+
+
+    #define DEFAULT_LENGTH 23
+    jsonLine items[11]; //will store config.json in here
+    char *token;
+
+    int i =0;
+    token = strtok(buffer, ":");
+    while (token != NULL) {
+        (items + i)->key = token;
+        printf("%s\n", token);
+        token = strtok(NULL, ":");
+        (items + i)->value = token;
+        printf("%s\n", token);
+        token = strtok(NULL, ":");
+        i++;
     }
     
+
+
+
+    printf("%d\n", atoi(items[2].value));
+    printf("%s\n", items[1].key);
+
+
+
+
+
+
+
+
+
+
+
     // delete the JSON object 
     cJSON_Delete(json); 
     return 0; 
