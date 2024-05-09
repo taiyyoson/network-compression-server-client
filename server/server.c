@@ -1,3 +1,7 @@
+//Taiyo Williamson, 20688536
+//server-side of client-server application to detect network compression
+
+//header files
 #include <stdio.h>
 #include <sys/socket.h>
 #include <stdlib.h>
@@ -8,30 +12,31 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 
+//global constants, hard-coding ports rather than command-line arguments
 #define PRE_PORT  7777
 #define POST_PORT 6666
 #define BUFFER_MAX 1024
 #define ITEMS 11
 
+//struct to hold json line items
 typedef struct {
     char *key;
     char *value;
 } jsonLine;
 
-int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME);
-char *est_TCP (int pre_post, int detect);
+int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME); //server_side, receives UDP packets, calculates difference in times, returns bool of whether network compression or not
+char *est_TCP (int pre_post, int detect); //handles everything to establish TCP connection and store JSON file in form of char buffer
+
 int main (int argc, char *argv[]) {
 
     //Pre-Probing TCP Connection Phase
-
-    //server listens for incoming connection from client
-    //receive json file, store in variable
     int pre_post = 1;
     int temp = 0;
+    //serialized buffer containing config.json
     char *msg = est_TCP(pre_post, temp);
+    jsonLine items[ITEMS]; //will store config.json in here
 
-    jsonLine items[ITEMS];
-
+    //using nested strtok to completely split the serialized buffer
     char delim[2] = ",";
     char indelim[2] = ":";
     char* token;
@@ -50,16 +55,100 @@ int main (int argc, char *argv[]) {
     }
    
 
-
-
     //Probing Phase
+    //initializing values
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
     int inter_time = atoi(items[8].value);
-    int detect = rec_UDP(src_port, dest_port, inter_time);
+    int detect = rec_UDP(src_port, dest_port, inter_time); //detect holds data that will be sent back to client
 
 
+    //Post-Probing TCP Connection Phase
+    //pre_post == 0 means program knows to send data, not receive in this TCP connection
+    pre_post = 0;
+    char* placeholder = est_TCP(pre_post, detect); //sends detect back to client, who decodes and returns output
 
+    //free malloc'd memory
+    free(msg);
+    free(placeholder);
+    return EXIT_SUCCESS;
+}
+
+char *est_TCP(int pre_post, int detect) {
+    //similar logic to in client.c
+
+    //creating socket
+    struct sockaddr_in addr;
+    int sockfd;
+    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+        perror("socket fail\n");
+        exit(EXIT_FAILURE);
+    }
+    //filling server info, will use to bind socket
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    //pre_post determines TCP_port PREPROB or POSTPROB
+    if (pre_post)
+        addr.sin_port = htons(PRE_PORT);
+    else    
+        addr.sin_port = htons(POST_PORT);
+
+    //bind socket, error handling
+    if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
+        printf("cannot bind socket to address\n");
+        exit(0);
+    }
+
+    //listen for TCP connect requests
+    if (listen(sockfd, 1) < 0) {
+        printf("error listening\n");
+        exit(0);
+    }
+    //fill in server info, accept request
+    struct sockaddr_in server_addr;
+    int client_sock;
+    socklen_t addr_len = sizeof(server_addr);
+    client_sock = accept(sockfd, (struct sockaddr *)&server_addr, &addr_len);
+    if (client_sock < 0) {
+        printf("error accepting connection\n");
+        exit(0);
+    }
+
+    //first TCP, receiving JSON file
+    if (pre_post) {
+        int received;
+        char *BUFFER = (char *) malloc(sizeof(char) * BUFFER_MAX);
+        if ((received = recv(sockfd, BUFFER, BUFFER_MAX,0) < 0)) { //error handling
+            printf("recv() failed\n");
+        }
+        else if (received == 0) {
+            printf("sender has closed connection\n");
+        }
+        else {
+            printf("received successfully!\n");
+        }
+        return BUFFER;
+    }
+    //second TCP connection, sending data back
+    else {
+        char *BUFFER2 = (char *) malloc(sizeof(char) * BUFFER_MAX);
+        //copying server's findings to buffer, sending buffer back to client (will only be either 1 or 0)
+        sprintf(BUFFER2, "%d", detect);
+        int count1 = send(sockfd, BUFFER2, BUFFER_MAX, 0);
+        if (count1 == -1) { //error handling
+            printf("error sending message to client\n");
+            exit(0);
+        }
+        return BUFFER2;
+    }
+    //edge case
+    return NULL;
+}
+
+int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
+
+    //basic idea:
     //connections now been established
     //start inter_time, same time as client
         //while inter_time != 0, listen for low-entropy UDP packets
@@ -84,114 +173,46 @@ int main (int argc, char *argv[]) {
         //ELSE: store res = 0 and send that msg back to client
 
 
-    //Post-Probing TCP Connection Phase
-    pre_post = 0;
-    char* placeholder = est_TCP(pre_post, detect);
-
-    free(msg);
-    free(placeholder);
-    return EXIT_SUCCESS;
-}
-
-char *est_TCP(int pre_post, int detect) {
-    struct sockaddr_in addr;
-    int sockfd;
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-        perror("socket fail\n");
-        exit(EXIT_FAILURE);
-    }
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    if (pre_post)
-        addr.sin_port = htons(PRE_PORT);
-    else    
-        addr.sin_port = htons(POST_PORT);
-
-    if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-        printf("cannot bind socket to address\n");
-        exit(0);
-    }
-
-    if (listen(sockfd, 1) < 0) {
-        printf("error listening\n");
-        exit(0);
-    }
-    struct sockaddr_in server_addr;
-    int client_sock;
-    socklen_t addr_len = sizeof(server_addr);
-    client_sock = accept(sockfd, (struct sockaddr *)&server_addr, &addr_len);
-    if (client_sock < 0) {
-        printf("error accepting connection\n");
-        exit(0);
-    }
-
-    if (pre_post) {
-        int received;
-        char *BUFFER = (char *) malloc(sizeof(char) * BUFFER_MAX);
-        if ((received = recv(sockfd, BUFFER, BUFFER_MAX,0) < 0)) {
-            printf("recv() failed\n");
-        }
-        else if (received == 0) {
-            printf("sender has closed connection\n");
-        }
-        else {
-            printf("received successfully!\n");
-        }
-        return BUFFER;
-    }
-    else {
-        char *BUFFER2 = (char *) malloc(sizeof(char) * BUFFER_MAX);
-        //copying server's findings to buffer, sending buffer back to client (will only be either 1 or 0)
-        sprintf(BUFFER2, "%d", detect);
-        int count1 = send(sockfd, BUFFER2, BUFFER_MAX, 0);
-        if (count1 == -1) {
-            printf("error sending message to client\n");
-            exit(0);
-        }
-        return BUFFER2;
-    }
-    return NULL;
-}
-
-int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
     client_addr.sin_port = htons(SRC_PORT);
     socklen_t client_len = sizeof(client_addr);
-    char buffer[BUFFER_MAX];
+    char buffer[BUFFER_MAX]; //initializing buffer to receive payloads, but no handling the packets, placeholder
 
+    //creating socket
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0) < 0)) {
         printf("error with creating socket\n");
         exit(0);
     }
 
+    //fill server info
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(SERVER_PORT);
-    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) {
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) { //binding the socket
         printf("bind failed\n");
         exit(0);
     }
 
-    printf("Server is starting listen() for UDP packets");
+    //update statement
+    printf("Server is starting listen() for UDP packets\n");
     //LOW ENTROPY PAYLOAD
     //first received UDP packet
-
     int rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
     float sec = 0;
     int rec_last;
+    //starting the timer while still receiving packets
     clock_t before = clock();
         do {
             clock_t difference = clock() - before;
             sec = difference / CLOCKS_PER_SEC;
         } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && sec <= INTER_TIME);
-
+    //stop timer
     clock_t after = clock() - before;
     float low_entropy = after;
 
-    //HIGH ENTROPY PAYLOAD
+    //HIGH ENTROPY PAYLOAD (same as low entropy payload)
     sec = 0;
     rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
     before = clock();
@@ -202,7 +223,8 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
 
     clock_t after2 = clock() - before;
     float high_entropy = after2;
-
+    
+    //#define 0.1 as the threshold
     if ((high_entropy - low_entropy) >= 0.1) {
         return 1;
     }
