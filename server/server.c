@@ -181,9 +181,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
 
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
-    client_addr.sin_port = htons(SRC_PORT);
-    client_addr.sin_addr.s_addr = INADDR_ANY;
-    socklen_t client_len = sizeof(client_addr);
+    socklen_t client_len = sizeof(struct sockaddr_in);
     char buffer[BUFFER_MAX]; //initializing buffer to receive payloads, but no handling the packets, placeholder
 
     //creating socket
