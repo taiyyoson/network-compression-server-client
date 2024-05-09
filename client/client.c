@@ -207,7 +207,7 @@ void send_UDP (jsonLine *items) {
     //initialize necessary variables
     int packet_size = atoi(items[7].value);
     int train_size = atoi(items[9].value);
-    int inter_time = atoi(items[8].value);
+    int inter_time = atoi(items[8].value) * 1000;
     //fill buffer with 1000 0s
     char low_entropy_BUFFER[packet_size];
     memset(low_entropy_BUFFER, 0, packet_size);
@@ -215,20 +215,22 @@ void send_UDP (jsonLine *items) {
             //while timer isn't == inter_time (or packet count != 6000), run while loop
             //to make and send UDP packets with all 0s buffer 
     //basic timer
-        float sec = 0;
-        int pak_count = 0, true_count = 0;
+        int msec = 0;
+        int pak_count = 0;
         clock_t before = clock();
         do {
             clock_t difference = clock() - before;
-            sec = difference / CLOCKS_PER_SEC;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
             //send UDP packet (6000 times haha)
             //setting packet ID
             low_entropy_BUFFER[0] = pak_count & 0xFF;
             low_entropy_BUFFER[1] = pak_count & 0xFF;
             if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
+            else 
+                printf("sent packet %d\n", pak_count);
             pak_count++;
-        } while ((sec <= inter_time) && (pak_count <= train_size));
+        } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("Low entropy payload sent!\n");
     
     //second time, restart before timer and new difference timer
@@ -241,19 +243,22 @@ void send_UDP (jsonLine *items) {
         fread(high_entropy_BUFFER, sizeof(char), packet_size, fp);
         fclose(fp);
         
-        sec = 0, pak_count = 0, true_count = 0;
+        printf("Sending high entropy payload\n"); 
+        msec = 0, pak_count = 0;
         before = clock();
         do {
             clock_t difference = clock() - before;
-            sec = difference / CLOCKS_PER_SEC;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
             //setting packet ID
             high_entropy_BUFFER[0] = pak_count & 0xFF;
             high_entropy_BUFFER[1] = pak_count & 0xFF;
             //send UDP packet (6000 times again)
             if (sendto(sockfd, high_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
+            else 
+                printf("sent packet %d\n", pak_count);
             pak_count++;
-        } while ((sec <= inter_time) && (pak_count <= train_size));
+        } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("High entropy payload sent!\n");
     close(sockfd);
 }
