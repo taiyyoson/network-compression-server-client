@@ -1,9 +1,11 @@
 //Taiyo Williamson, 20688536
 //client-side of client-server application to detect network compression
 
+
 //header files
 #include <stdio.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
@@ -12,6 +14,7 @@
 #include <time.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
+#include <errno.h>
 
 #include "../cJSON.h"
 
@@ -119,7 +122,7 @@ int main(int argc, char *argv[]) {
 char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
     //create socket, basic error handling
     int sockfd;
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
 	    printf("ERROR opening socket\n");
         exit(0);
     }
@@ -133,11 +136,14 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
         server_addr.sin_port = htons(PORT[0]);
     else
         server_addr.sin_port = htons(PORT[1]);
-    server_addr.sin_addr.s_addr = inet_addr(ADDR);
+    if (!(inet_pton(AF_INET, ADDR, &(server_addr.sin_addr)) > 0)) {
+        printf("client.c 148: ERROR assigning address to socket");
+        exit(EXIT_FAILURE);
+    }
 
     //error handling, try to connect with the server
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-        printf("ERROR connecting with the server using socket!\n");
+        printf("client.c 154: ERROR connecting with the server using socket!\n");
         exit(0);
     }
     else
@@ -174,14 +180,14 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
 void send_UDP (jsonLine *items) { 
     //create socket
     int sockfd;
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
         printf("Error making UDP socket\n");
         exit(EXIT_FAILURE);
     }
 
     //set DF bit
     int dfval = 1;
-    if (setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAG, &dfval, sizeof(dfval)) < 0) {
+    if (setsockopt(sockfd, IPPROTO_IP, IP_DONTFRAG, &dfval, sizeof(dfval)) < 0) { //if linux, use IP_MTU_DISCOVER & IP_PMTUDISC_DO
         printf("error with setting don't fragment bit\n");
         exit(EXIT_FAILURE);
     }
@@ -191,7 +197,10 @@ void send_UDP (jsonLine *items) {
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
     sin.sin_port = htons(atoi(items[2].value));
-    sin.sin_addr.s_addr = inet_addr(items[0].value);
+    if (!(inet_pton(AF_INET, items[0].value, &(sin.sin_addr)) > 0)) {
+        printf("client.c 209: ERROR assigning address to socket");
+        exit(EXIT_FAILURE);
+    }
 
     printf("Set server info (struct sockaddr_in stuff lmao)!\n");
 
@@ -232,7 +241,6 @@ void send_UDP (jsonLine *items) {
         fread(high_entropy_BUFFER, sizeof(char), packet_size, fp);
         fclose(fp);
         
-
         sec = 0, pak_count = 0, true_count = 0;
         before = clock();
         do {

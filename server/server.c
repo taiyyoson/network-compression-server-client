@@ -11,6 +11,7 @@
 #include <time.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
+#include <errno.h>
 
 //global constants, hard-coding ports rather than command-line arguments
 #define PRE_TCP_PORT 7777
@@ -79,7 +80,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
     //creating socket
     struct sockaddr_in addr;
     int sockfd;
-    if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
         perror("socket fail\n");
         exit(EXIT_FAILURE);
     }
@@ -100,7 +101,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
     }
 
     //listen for TCP connect requests
-    if (listen(sockfd, 1) < 0) {
+    if (listen(sockfd, 10) < 0) {
         printf("error listening\n");
         exit(0);
     }
@@ -118,7 +119,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
     if (pre_post) {
         int received;
         char *BUFFER = (char *) malloc(sizeof(char) * BUFFER_MAX);
-        if ((received = recv(sockfd, BUFFER, BUFFER_MAX,0) < 0)) { //error handling
+        if ((received = recv(client_sock, BUFFER, BUFFER_MAX,0) < 0)) { //error handling
             printf("recv() failed\n");
         }
         else if (received == 0) {
@@ -134,7 +135,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
         char *BUFFER2 = (char *) malloc(sizeof(char) * BUFFER_MAX);
         //copying server's findings to buffer, sending buffer back to client (will only be either 1 or 0)
         sprintf(BUFFER2, "%d", detect);
-        int count1 = send(sockfd, BUFFER2, BUFFER_MAX, 0);
+        int count1 = send(client_sock, BUFFER2, strlen(BUFFER2), 0);
         if (count1 == -1) { //error handling
             printf("error sending message to client\n");
             exit(0);
@@ -190,7 +191,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(SERVER_PORT);
     if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) { //binding the socket
-        printf("bind failed\n");
+        printf("server.c 193: bind failed\n");
         exit(0);
     }
 
@@ -198,7 +199,10 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     printf("Server is starting listen() for UDP packets\n");
     //LOW ENTROPY PAYLOAD
     //first received UDP packet
-    int rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
+    int rec_first;
+    while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
+        continue;
+    }
     float sec = 0;
     int rec_last;
     //starting the timer while still receiving packets
@@ -213,7 +217,9 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
     sec = 0;
-    rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
+    while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
+        continue;
+    }
     before = clock();
         do {
             clock_t difference = clock() - before;
