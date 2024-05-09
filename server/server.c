@@ -105,6 +105,8 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
         printf("error listening\n");
         exit(0);
     }
+    printf("server is listening\n");
+    
     //fill in server info, accept request
     struct sockaddr_in server_addr;
     int client_sock;
