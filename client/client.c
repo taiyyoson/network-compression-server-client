@@ -180,7 +180,7 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
 void send_UDP (jsonLine *items) { 
     //create socket
     int sockfd;
-    if ((sockfd = socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
         printf("Error making UDP socket\n");
         exit(EXIT_FAILURE);
     }
@@ -236,7 +236,7 @@ void send_UDP (jsonLine *items) {
         char high_entropy_BUFFER[packet_size];
         FILE *fp;
         if ((fp = fopen("../random_file", "rb")) == NULL) {
-            printf("error opening file");
+            printf("error opening file\n");
         }
         fread(high_entropy_BUFFER, sizeof(char), packet_size, fp);
         fclose(fp);

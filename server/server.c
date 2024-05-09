@@ -106,7 +106,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
         exit(0);
     }
     printf("server is listening\n");
-    
+
     //fill in server info, accept request
     struct sockaddr_in server_addr;
     int client_sock;
@@ -182,11 +182,12 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
     client_addr.sin_port = htons(SRC_PORT);
+    client_addr.sin_addr.s_addr = INADDR_ANY;
     socklen_t client_len = sizeof(client_addr);
     char buffer[BUFFER_MAX]; //initializing buffer to receive payloads, but no handling the packets, placeholder
 
     //creating socket
-    if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0) < 0)) {
+    if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0) < 0)) {
         printf("error with creating socket\n");
         exit(0);
     }
@@ -212,6 +213,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
+    printf("Received first packet! Starting low entropy timer\n");
     float sec = 0;
     int rec_last;
     //starting the timer while still receiving packets
@@ -230,6 +232,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
+    printf("Received first packet! Starting high entropy timer\n");
     before = clock();
         do {
             clock_t difference = clock() - before;
