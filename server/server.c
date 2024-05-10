@@ -70,6 +70,7 @@ int main (int argc, char *argv[]) {
     //Post-Probing TCP Connection Phase
     //pre_post == 0 means program knows to send data, not receive in this TCP connection
     pre_post = 0;
+    printf("%d\n", detect);
     char* placeholder = est_TCP(pre_post, detect, TCP_pre_port, TCP_post_port); //sends detect back to client, who decodes and returns output
 
     //free malloc'd memory
@@ -239,7 +240,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
         } while(msec <= INTER_TIME);
     //stop timer
     clock_t after = clock() - before;
-    long double low_entropy = (after * 1000 / CLOCKS_PER_SEC) - 500; //-500 accounts for included timeout
+    long double low_entropy = (after * 1000 / CLOCKS_PER_SEC);
     printf("Received low entropy payload! Time is: %Lf\n", low_entropy);
 
 
@@ -260,7 +261,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
         } while(msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
-    long double high_entropy = (after2 * 1000 / CLOCKS_PER_SEC) - 500;
+    long double high_entropy = (after2 * 1000 / CLOCKS_PER_SEC);
     printf("Received high entropy payload! Time is: %Lf\n", high_entropy);
     
     //#define 100 ms as the threshold
