@@ -58,7 +58,6 @@ int main (int argc, char *argv[]) {
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
     int inter_time = atoi(items[8].value) * 1000;
-    printf("%d and %d\n", dest_port, src_port);
     int detect = rec_UDP(src_port, dest_port, inter_time); //detect holds data that will be sent back to client
     int TCP_pre_port = atoi(items[5].value);
     int TCP_post_port = atoi(items[6].value);
