@@ -17,6 +17,7 @@
 #define PRE_TCP_PORT 7777
 #define BUFFER_MAX 1024
 #define ITEMS 11
+#define DEF_THRESHOLD 100
 
 
 //struct to hold json line items
@@ -25,7 +26,7 @@ typedef struct {
     char *value;
 } jsonLine;
 
-int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME); //server_side, receives UDP packets, calculates difference in times, returns bool of whether network compression or not
+int rec_UDP (int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE); //server_side, receives UDP packets, calculates difference in times, returns bool of whether network compression or not
 char *est_TCP (int pre_post, int detect, int PRE_PORT, int POST_PORT); //handles everything to establish TCP connection and store JSON file in form of char buffer
 
 int main (int argc, char *argv[]) {
@@ -58,7 +59,8 @@ int main (int argc, char *argv[]) {
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
     int inter_time = atoi(items[8].value) * 1000;
-    int detect = rec_UDP(src_port, dest_port, inter_time); //detect holds data that will be sent back to client
+    int train_size = atoi(items[9].value);
+    int detect = rec_UDP(src_port, dest_port, inter_time, train_size); //detect holds data that will be sent back to client
     int TCP_pre_port = atoi(items[5].value);
     int TCP_post_port = atoi(items[6].value);
 
@@ -152,7 +154,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT) {
     return NULL;
 }
 
-int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
+int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE) {
 
     //basic idea:
     //connections now been established
@@ -219,16 +221,17 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
-            printf("%d: %d\n", msec, pak);
+            if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
+                printf("FAILED to receive packet\n");
             pak++;
-        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
+        } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
     //stop timer
     clock_t after = clock() - before;
     float low_entropy = after;
     printf("Received low entropy payload! Time is: %f\n", low_entropy);
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
-    msec = 0;
+    msec = 0, pak = 0;
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
@@ -237,14 +240,16 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
-        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
+            if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0))
+                printf("FAILED to receive packet\n");
+        } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
     float high_entropy = after2;
     printf("Received high entropy payload! Time is: %f\n", high_entropy);
     
-    //#define 0.1 as the threshold
-    if ((high_entropy - low_entropy) >= 0.1) {
+    //#define 100 ms as the threshold
+    if ((high_entropy - low_entropy) >= DEF_THRESHOLD) {
         return 1;
     }
     else {
