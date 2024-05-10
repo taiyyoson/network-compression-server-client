@@ -57,7 +57,7 @@ int main (int argc, char *argv[]) {
     //initializing values
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
-    int inter_time = atoi(items[8].value);
+    int inter_time = atoi(items[8].value) * 1000;
     int detect = rec_UDP(src_port, dest_port, inter_time); //detect holds data that will be sent back to client
     int TCP_pre_port = atoi(items[5].value);
     int TCP_post_port = atoi(items[6].value);
@@ -212,21 +212,21 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
         continue;
     }
     printf("Received first packet! Starting low entropy timer\n");
-    float sec = 0;
+    int msec = 0;
     int rec_last;
     //starting the timer while still receiving packets
     clock_t before = clock();
         do {
             clock_t difference = clock() - before;
-            sec = difference / CLOCKS_PER_SEC;
-        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && sec <= INTER_TIME);
+            msec = difference * 1000 / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
     //stop timer
     clock_t after = clock() - before;
     float low_entropy = after;
     printf("Received low entropy payload! Time is: %f\n", low_entropy);
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
-    sec = 0;
+    msec = 0;
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
@@ -234,8 +234,8 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     before = clock();
         do {
             clock_t difference = clock() - before;
-            sec = difference / CLOCKS_PER_SEC;
-        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && sec <= INTER_TIME);
+            msec = difference * 1000 / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
     float high_entropy = after2;
