@@ -227,7 +227,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE) {
         } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
     //stop timer
     clock_t after = clock() - before;
-    float low_entropy = after;
+    float low_entropy = after * 1000 / CLOCKS_PER_SEC;
     printf("Received low entropy payload! Time is: %f\n", low_entropy);
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
@@ -240,12 +240,12 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE) {
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
-            if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0))
+            if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
         } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
-    float high_entropy = after2;
+    float high_entropy = after2 * 1000 / CLOCKS_PER_SEC;
     printf("Received high entropy payload! Time is: %f\n", high_entropy);
     
     //#define 100 ms as the threshold
