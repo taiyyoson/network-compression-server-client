@@ -33,7 +33,7 @@ typedef struct {
 
 //functions made
 cJSON *JSONObj(char *input[]); //creates cJSON root variable that is used to make json calls
-char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post); //handles everything to establish TCP connection and send JSON file in form of char buffer
+char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int server_wait_time); //handles everything to establish TCP connection and send JSON file in form of char buffer
 void send_UDP (jsonLine *items); //handles everything to send the two UDP payload trains, one low entropy, one high entropy
 
 int main(int argc, char *argv[]) {
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
       {"UDP_TTL", UDP_TTL->valuestring},
       {"server_wait_time", server_wait_time->valuestring}
     };
-    //printf("%s: %s\n", config[2].key, config[2].value);
+    printf("%s: %s\n", config[2].key, config[2].value);
 
     char buffer[BUFFER_MAX] = ""; //create buffer, use strcat to fill/serialize json file
     for (int i=0; i < ITEMS; i++) {
@@ -93,10 +93,9 @@ int main(int argc, char *argv[]) {
 
     //establish first tcp connection in function call
     int pre_post = 1; //pre-post indicates which port to use and whether to use TCP proto to SEND a message, or RECV one
-    char *addr; //addr is server IP address
-    strcpy(addr, config[0].value);
+    char *addr = config[0].value; //addr is server IP address
     int port[2] = {atoi(config[5].value), atoi(config[6].value)}; //store ports in int array
-    char *placeholder = est_TCP(buffer, port, addr, pre_post); //placeholder is never used, is assigned a NULL value
+    char *placeholder = est_TCP(buffer, port, addr, pre_post, 0); //placeholder is never used, is assigned a NULL value, 0 is placeholder
 
     //Probing Phase
 
@@ -108,7 +107,7 @@ int main(int argc, char *argv[]) {
         //but this time server will return msg
         pre_post = 0;
         //establish post-Probe TCP connection, here, the client will receive a message from the server, stored in res
-        char *res = est_TCP(NULL, port, addr, pre_post);
+        char *res = est_TCP(NULL, port, addr, pre_post, atoi(config[11].value)); //atoi value is server_wait_time
         //compression converts char to int using ASCII manipulation
         int compression = res[0] - 48; //based on msg, if (res == 0, printf("No compression detected")), if res == 1, then yes compression
         if (compression) 
@@ -122,7 +121,10 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post) {
+char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int server_wait_time) {
+    if (!pre_post) {
+        sleep(server_wait_time);
+    }
     //create socket, basic error handling
     int sockfd;
     if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
@@ -237,7 +239,7 @@ void send_UDP (jsonLine *items) {
         printf("Low entropy payload sent!\n");
     
     int server_wait_time = atoi(items[11].value);
-    sleep(server_wait_time);
+    sleep(server_wait_time); //give the server time to distinguish between the two trains
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
         char high_entropy_BUFFER[packet_size];

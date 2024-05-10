@@ -4,6 +4,7 @@
 //header files
 #include <stdio.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
 #include <netinet/in.h>
@@ -17,7 +18,7 @@
 #define PRE_TCP_PORT 7777
 #define BUFFER_MAX 1024
 #define ITEMS 12
-#define DEF_THRESHOLD 0.1
+#define DEF_THRESHOLD 100
 
 
 //struct to hold json line items
@@ -58,7 +59,7 @@ int main (int argc, char *argv[]) {
     //initializing values
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
-    int inter_time = atoi(items[8].value);
+    int inter_time = atoi(items[8].value) * 1000;
     int train_size = atoi(items[9].value);
     int wait_time = atoi(items[10].value);
     int detect = rec_UDP(src_port, dest_port, inter_time, train_size, wait_time); //detect holds data that will be sent back to client
@@ -222,18 +223,18 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
 
         do {
             clock_t difference = clock() - before;
-            msec = difference / CLOCKS_PER_SEC;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
             pak++;
         } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
     //stop timer
     clock_t after = clock() - before;
-    long double low_entropy = after / CLOCKS_PER_SEC;
+    long double low_entropy = after * 1000 / CLOCKS_PER_SEC;
     printf("Received low entropy payload! Time is: %Lf\n", low_entropy);
 
 
-    sleep(WAIT_TIME - 2);
+
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
     msec = 0, pak = 0;
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
@@ -243,14 +244,14 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
     before = clock();
         do {
             clock_t difference = clock() - before;
-            msec = difference / CLOCKS_PER_SEC;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
             pak++;
         } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
-    long double high_entropy = after2 / CLOCKS_PER_SEC;
+    long double high_entropy = after2 * 1000 / CLOCKS_PER_SEC;
     printf("Received high entropy payload! Time is: %Lf\n", high_entropy);
     
     //#define 100 ms as the threshold
