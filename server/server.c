@@ -52,7 +52,7 @@ int main (int argc, char *argv[]) {
         token = strtok(NULL, ":");
         i++;
     }
-    print("Received config file! info parsed correctly: \n");
+    printf("Received config file! info parsed correctly: \n");
     for (int i=0; i < ITEMS; i++) {
         printf("%s: %s\n", items[i].key, items[i].value);
     }
