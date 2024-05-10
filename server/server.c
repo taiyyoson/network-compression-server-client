@@ -213,12 +213,14 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     printf("Received first packet! Starting low entropy timer\n");
     int msec = 0;
     int rec_last = 0;
+    int pak = 0;
     //starting the timer while still receiving packets
     clock_t before = clock();
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
-            printf("%d: %d\n", msec, rec_last);
+            printf("%d: %d\n", msec, pak);
+            pak++;
         } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
     //stop timer
     clock_t after = clock() - before;
