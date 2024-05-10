@@ -118,3 +118,30 @@ cJSON *JSONObj(char *input[]) {
 
     return json;
 }
+
+
+    clock_t before = clock();
+        do {
+            clock_t difference = clock() - before;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
+    //stop timer
+    clock_t after = clock() - before;
+    float low_entropy = after;
+    printf("Received low entropy payload! Time is: %f\n", low_entropy);
+
+    //HIGH ENTROPY PAYLOAD (same as low entropy payload)
+    msec = 0;
+    while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
+        continue;
+    }
+    printf("Received first packet! Starting high entropy timer\n");
+    before = clock();
+        do {
+            clock_t difference = clock() - before;
+            msec = difference * 1000 / CLOCKS_PER_SEC;
+        } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
+
+    clock_t after2 = clock() - before;
+    float high_entropy = after2;
+    printf("Received high entropy payload! Time is: %f\n", high_entropy);

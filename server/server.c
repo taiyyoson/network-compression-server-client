@@ -182,7 +182,6 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     int sockfd;
     struct sockaddr_in server_addr, client_addr;
     socklen_t client_len = sizeof(struct sockaddr_in);
-    char buffer[BUFFER_MAX]; //initializing buffer to receive payloads, but no handling the packets, placeholder
 
     //creating socket
     if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) < 0) {
@@ -207,6 +206,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     //LOW ENTROPY PAYLOAD
     //first received UDP packet
     int rec_first;
+    char buffer[BUFFER_MAX]; //initializing buffer to receive payloads, but no handling the packets, placeholder
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
@@ -218,6 +218,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
+            printf("%d\n", msec);
         } while(((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) > 0) && msec <= INTER_TIME);
     //stop timer
     clock_t after = clock() - before;
