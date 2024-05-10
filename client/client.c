@@ -21,8 +21,9 @@
 //global constants 
 #define DEFAULT_LENGTH 22
 #define ADDR_LEN 14
-#define ITEMS 11
+#define ITEMS 12
 #define BUFFER_MAX 1024
+
 
 //struct to hold json line items
 typedef struct {
@@ -58,6 +59,7 @@ int main(int argc, char *argv[]) {
     cJSON *inter_time = cJSON_GetObjectItemCaseSensitive(json, "inter_time"); 
     cJSON *UDP_train_size = cJSON_GetObjectItemCaseSensitive(json, "UDP_train_size"); 
     cJSON *UDP_TTL = cJSON_GetObjectItemCaseSensitive(json, "UDP_TTL"); 
+    cJSON *server_wait_time = cJSON_GetObjectItemCaseSensitive(json, "server_wait_time");
 
     jsonLine config[ITEMS] = {
       {"server_ip_addr", server_ip_addr->valuestring},
@@ -70,7 +72,8 @@ int main(int argc, char *argv[]) {
       {"UDP_packet_size", UDP_packet_size->valuestring},
       {"inter_time", inter_time->valuestring},
       {"UDP_train_size", UDP_train_size->valuestring},
-      {"UDP_TTL", UDP_TTL->valuestring}
+      {"UDP_TTL", UDP_TTL->valuestring},
+      {"server_wait_time", server_wait_time->valuestring}
     };
     //printf("%s: %s\n", config[2].key, config[2].value);
 
@@ -79,7 +82,7 @@ int main(int argc, char *argv[]) {
         strcat(buffer,config[i].key);
         strcat(buffer,":");
         strcat(buffer,config[i].value);
-        if (i == 10) //remove last comma 
+        if (i == 11) //remove last comma 
             break;
         strcat(buffer, ":");
     }
@@ -233,6 +236,8 @@ void send_UDP (jsonLine *items) {
         } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("Low entropy payload sent!\n");
     
+    int server_wait_time = atoi(items[11].value);
+    sleep(server_wait_time);
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
         char high_entropy_BUFFER[packet_size];
