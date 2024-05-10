@@ -17,7 +17,7 @@
 #define PRE_TCP_PORT 7777
 #define BUFFER_MAX 1024
 #define ITEMS 11
-#define DEF_THRESHOLD 100
+#define DEF_THRESHOLD 0.1
 
 
 //struct to hold json line items
@@ -58,7 +58,7 @@ int main (int argc, char *argv[]) {
     //initializing values
     int dest_port = atoi(items[2].value);
     int src_port = atoi(items[1].value);
-    int inter_time = atoi(items[8].value) * 1000;
+    int inter_time = atoi(items[8].value);
     int train_size = atoi(items[9].value);
     int detect = rec_UDP(src_port, dest_port, inter_time, train_size); //detect holds data that will be sent back to client
     int TCP_pre_port = atoi(items[5].value);
@@ -220,14 +220,14 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE) {
     clock_t before = clock();
         do {
             clock_t difference = clock() - before;
-            msec = difference * 1000 / CLOCKS_PER_SEC;
+            msec = difference / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
             pak++;
         } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
     //stop timer
     clock_t after = clock() - before;
-    float low_entropy = after * 1000 / CLOCKS_PER_SEC;
+    float low_entropy = after / CLOCKS_PER_SEC;
     printf("Received low entropy payload! Time is: %f\n", low_entropy);
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
@@ -239,13 +239,14 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE) {
     before = clock();
         do {
             clock_t difference = clock() - before;
-            msec = difference * 1000 / CLOCKS_PER_SEC;
+            msec = difference / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
+            pak++;
         } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
-    float high_entropy = after2 * 1000 / CLOCKS_PER_SEC;
+    float high_entropy = after2 / CLOCKS_PER_SEC;
     printf("Received high entropy payload! Time is: %f\n", high_entropy);
     
     //#define 100 ms as the threshold
