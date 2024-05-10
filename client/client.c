@@ -1,7 +1,12 @@
 //Taiyo Williamson, 20688536
 //client-side of client-server application to detect network compression
 
-
+/*
+    notes to fix prior to submission
+        fix up packet id? is what's shown on wireshark 
+        UDP src port needs to be set to 9876
+        (look at rubric, remember leo will grade pretty much primarily from .pcap files, not code)
+*/
 //header files
 #include <stdio.h>
 #include <sys/socket.h>
@@ -111,9 +116,9 @@ int main(int argc, char *argv[]) {
         //compression converts char to int using ASCII manipulation
         int compression = res[0] - 48; //based on msg, if (res == 0, printf("No compression detected")), if res == 1, then yes compression
         if (compression) 
-            printf("FINAL: Network compression detected!");
+            printf("FINAL: Network compression detected!\n");
         else    
-            printf("FINAL: Network compression NOT detected!");
+            printf("FINAL: Network compression NOT detected!\n");
         free(res);
 
     //DONE with pt 1!
