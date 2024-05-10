@@ -219,6 +219,8 @@ void send_UDP (jsonLine *items) {
     //first time, set timer with inter_time
             //while timer isn't == inter_time (or packet count != 6000), run while loop
             //to make and send UDP packets with all 0s buffer 
+    int server_wait_time = atoi(items[11].value);
+    sleep(server_wait_time); //wait for server to start listening 
     //basic timer
         int msec = 0;
         int pak_count = 0;
@@ -238,7 +240,6 @@ void send_UDP (jsonLine *items) {
         } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("Low entropy payload sent!\n");
     
-    int server_wait_time = atoi(items[11].value);
     sleep(server_wait_time); //give the server time to distinguish between the two trains
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
