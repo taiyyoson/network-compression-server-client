@@ -191,17 +191,16 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME) {
     }
 
     //fill server info
-    //won't be using these, since datagram sockets don't require server to bind 
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(SERVER_PORT);
     
-    //no need to bind 
-    /*if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr) < 0)) { //binding the socket
+
+    if (bind(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) { //binding the socket
         printf("server.c 193: bind failed\n");
         exit(0);
-    }*/
+    }
 
     //update statement
     printf("Server is starting listen() for UDP packets\n");

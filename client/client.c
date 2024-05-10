@@ -227,8 +227,8 @@ void send_UDP (jsonLine *items) {
             low_entropy_BUFFER[1] = pak_count & 0xFF;
             if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
-            else 
-                printf("sent packet %d\n", pak_count);
+            //else 
+                //printf("sent packet %d\n", pak_count);
             pak_count++;
         } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("Low entropy payload sent!\n");
@@ -255,8 +255,8 @@ void send_UDP (jsonLine *items) {
             //send UDP packet (6000 times again)
             if (sendto(sockfd, high_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
-            else 
-                printf("sent packet %d\n", pak_count);
+            //else 
+                //printf("sent packet %d\n", pak_count);
             pak_count++;
         } while ((msec <= inter_time) && (pak_count <= train_size));
         printf("High entropy payload sent!\n");
