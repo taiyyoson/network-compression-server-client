@@ -193,6 +193,16 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
         exit(0);
     }
 
+    struct timeval timeout;
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 500000;
+    //creates timeout for recvfrom. if recvfrom waits longer than 1/2 a sec, returns -1 error
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout)) < 0) { //basically an inactivity timer
+        printf("error with setting timeout\n");
+        exit(EXIT_FAILURE);
+    }
+
+
     //fill server info
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
@@ -207,6 +217,7 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
 
     //update statement
     printf("Server is starting listen() for UDP packets\n");
+    
     //LOW ENTROPY PAYLOAD
     //first received UDP packet
     int rec_first;
@@ -217,30 +228,24 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
     printf("Received first packet! Starting low entropy timer\n");
     long double msec = 0;
     int rec_last = 0;
-    int pak = 0;
     //starting the timer while still receiving packets
     clock_t before = clock();
-
         do {
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
             rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
-            if (rec_last < 0)
-                printf("FAILED to receive packet\n");
-            if (rec_last == 0)
+            if (rec_last <= 0)
                 break;
-            printf("%d\n", pak);
-            pak++;
-        } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
+        } while(msec <= INTER_TIME);
     //stop timer
     clock_t after = clock() - before;
-    long double low_entropy = after * 1000 / CLOCKS_PER_SEC;
+    long double low_entropy = (after * 1000 / CLOCKS_PER_SEC) - 500; //-500 accounts for included timeout
     printf("Received low entropy payload! Time is: %Lf\n", low_entropy);
 
 
 
     //HIGH ENTROPY PAYLOAD (same as low entropy payload)
-    msec = 0, pak = 0;
+    msec = 0;
     while ((rec_first = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0) {
         continue;
     }
@@ -250,16 +255,12 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
             clock_t difference = clock() - before;
             msec = difference * 1000 / CLOCKS_PER_SEC;
             rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len);
-            if ((rec_last < 0))
-                printf("FAILED to receive packet\n");
-            if(rec_last == 0) 
+            if (rec_last <= 0)
                 break;
-            printf("%d\n", pak);
-            pak++;
-        } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
+        } while(msec <= INTER_TIME);
 
     clock_t after2 = clock() - before;
-    long double high_entropy = after2 * 1000 / CLOCKS_PER_SEC;
+    long double high_entropy = (after2 * 1000 / CLOCKS_PER_SEC) - 500;
     printf("Received high entropy payload! Time is: %Lf\n", high_entropy);
     
     //#define 100 ms as the threshold

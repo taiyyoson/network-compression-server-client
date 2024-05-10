@@ -222,25 +222,19 @@ void send_UDP (jsonLine *items) {
     int server_wait_time = atoi(items[11].value);
 
     //basic timer
-        int msec = 0;
         int pak_count = 0;
-        clock_t before = clock();
         do {
-            clock_t difference = clock() - before;
-            msec = difference * 1000 / CLOCKS_PER_SEC;
             //send UDP packet (6000 times haha)
             //setting packet ID
             low_entropy_BUFFER[0] = pak_count & 0xFF;
             low_entropy_BUFFER[1] = pak_count & 0xFF;
             if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
-            //else 
-                //printf("sent packet %d\n", pak_count);
             pak_count++;
-        } while ((msec <= inter_time) && (pak_count <= train_size));
-        printf("Low entropy payload sent!\n");
-    
-    sleep(server_wait_time); //give the server time to distinguish between the two trains
+        } while (pak_count <= train_size);
+
+
+    sleep(server_wait_time);
     //second time, restart before timer and new difference timer
         //make random packet_data using random_file in ../dir
         char high_entropy_BUFFER[packet_size];
@@ -252,21 +246,16 @@ void send_UDP (jsonLine *items) {
         fclose(fp);
         
         printf("Sending high entropy payload\n"); 
-        msec = 0, pak_count = 0;
-        before = clock();
+        pak_count = 0;
         do {
-            clock_t difference = clock() - before;
-            msec = difference * 1000 / CLOCKS_PER_SEC;
             //setting packet ID
             high_entropy_BUFFER[0] = pak_count & 0xFF;
             high_entropy_BUFFER[1] = pak_count & 0xFF;
             //send UDP packet (6000 times again)
             if (sendto(sockfd, high_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
-            //else 
-                //printf("sent packet %d\n", pak_count);
             pak_count++;
-        } while ((msec <= inter_time) && (pak_count <= train_size));
+        } while (pak_count <= train_size);
         printf("High entropy payload sent!\n");
     close(sockfd);
 }
