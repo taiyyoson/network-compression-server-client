@@ -220,7 +220,7 @@ void send_UDP (jsonLine *items) {
             //while timer isn't == inter_time (or packet count != 6000), run while loop
             //to make and send UDP packets with all 0s buffer 
     int server_wait_time = atoi(items[11].value);
-    sleep(server_wait_time); //wait for server to start listening 
+
     //basic timer
         int msec = 0;
         int pak_count = 0;

@@ -226,6 +226,8 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
             msec = difference * 1000 / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
+            else if (rec_last == 0)
+                break;
             printf("%d\n", pak);
             pak++;
         } while(msec <= INTER_TIME && pak <= TRAIN_SIZE);
@@ -248,6 +250,8 @@ int rec_UDP(int SRC_PORT, int SERVER_PORT, int INTER_TIME, int TRAIN_SIZE, int W
             msec = difference * 1000 / CLOCKS_PER_SEC;
             if (((rec_last = recvfrom(sockfd, buffer, BUFFER_MAX, 0, (struct sockaddr *)&client_addr, &client_len)) < 0))
                 printf("FAILED to receive packet\n");
+            else if(rec_last == 0) 
+                break;
             printf("%d\n", pak);
             pak++;
         } while(pak <= TRAIN_SIZE && msec <= INTER_TIME);
