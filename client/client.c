@@ -227,6 +227,7 @@ void send_UDP (jsonLine *items) {
     int server_wait_time = atoi(items[11].value);
 
     //basic timer
+        printf("Sending low entropy payload!\n");
         int pak_count = 0;
         do {
             //send UDP packet (6000 times haha)
@@ -237,6 +238,7 @@ void send_UDP (jsonLine *items) {
                 printf("packet failed to send\n");
             pak_count++;
         } while (pak_count <= train_size);
+        printf("Low entropy payload sent!\n");
 
 
     sleep(server_wait_time);
