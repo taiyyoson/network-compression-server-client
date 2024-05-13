@@ -1,12 +1,6 @@
 //Taiyo Williamson, 20688536
 //client-side of client-server application to detect network compression
 
-/*
-    notes to fix prior to submission
-        fix up packet id? is what's shown on wireshark 
-        UDP src port needs to be set to 9876
-        (look at rubric, remember leo will grade pretty much primarily from .pcap files, not code)
-*/
 //header files
 #include <stdio.h>
 #include <sys/socket.h>
@@ -31,29 +25,33 @@
 
 
 //struct to hold json line items
-typedef struct {
+typedef struct 
+{
     char *key;
     char *value;
 } jsonLine;
 
-//functions made
+//functions made, proper descriptions given at actual function bodies
 cJSON *JSONObj(char *input[]); //creates cJSON root variable that is used to make json calls
 char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int server_wait_time); //handles everything to establish TCP connection and send JSON file in form of char buffer
 void send_UDP (jsonLine *items); //handles everything to send the two UDP payload trains, one low entropy, one high entropy
 
+/***
+ * main is where all the code is ran, and actually calls the functions to send TCP and UDP packets
+ * argc is the number of arguments given on the cmd line
+ * argv is an array of strings allocated for each argument on the cmd line
+*/
 int main(int argc, char *argv[]) {
-   //parse given json file into struct
-    if (argc < 2) {
+   //first parse given json file into struct
+    if (argc < 2) { //if there's no config.json file given
         printf("missing JSON file in cmd line arg!\n");
         return EXIT_FAILURE;
     }
     //root to make JSON calls
-    //array of structs, representing config.json
     cJSON *json = JSONObj(argv);
   
     // access the JSON data 
     cJSON *server_ip_addr = cJSON_GetObjectItemCaseSensitive(json, "server_ip_addr"); 
-    //printf("%s\n", server_ip_addr->valuestring);
     cJSON *UDP_src_port = cJSON_GetObjectItemCaseSensitive(json, "UDP_src_port"); 
     cJSON *UDP_dest_port = cJSON_GetObjectItemCaseSensitive(json, "UDP_dest_port"); 
     cJSON *TCP_dest_port_headSYN = cJSON_GetObjectItemCaseSensitive(json, "TCP_dest_port_headSYN"); 
@@ -66,6 +64,7 @@ int main(int argc, char *argv[]) {
     cJSON *UDP_TTL = cJSON_GetObjectItemCaseSensitive(json, "UDP_TTL"); 
     cJSON *server_wait_time = cJSON_GetObjectItemCaseSensitive(json, "server_wait_time");
 
+    //array of structs, representing config.json
     jsonLine config[ITEMS] = {
       {"server_ip_addr", server_ip_addr->valuestring},
       {"UDP_src_port", UDP_src_port->valuestring},
@@ -80,12 +79,15 @@ int main(int argc, char *argv[]) {
       {"UDP_TTL", UDP_TTL->valuestring},
       {"server_wait_time", server_wait_time->valuestring}
     };
-    printf("%s: %s\n", config[2].key, config[2].value);
+    //simple testing printf statement
+    //printf("%s: %s\n", config[2].key, config[2].value);
 
+    //buffer is used when establishing pre-probe TCP connection
     char buffer[BUFFER_MAX] = ""; //create buffer, use strcat to fill/serialize json file
-    for (int i=0; i < ITEMS; i++) {
-        strcat(buffer,config[i].key);
-        strcat(buffer,":");
+    for (int i=0; i < ITEMS; i++) 
+    {
+        strcat(buffer,config[i].key); 
+        strcat(buffer,":"); //server-side will use strtok to parse this string
         strcat(buffer,config[i].value);
         if (i == 11) //remove last comma 
             break;
@@ -94,86 +96,107 @@ int main(int argc, char *argv[]) {
     
     
 
-    //Pre-Probing TCP Connection Phase
-
-    //establish first tcp connection in function call
     int pre_post = 1; //pre-post indicates which port to use and whether to use TCP proto to SEND a message, or RECV one
-    char *addr = config[0].value; //addr is server IP address
+    char *addr = config[0].value; //addr points to IP address
     int port[2] = {atoi(config[5].value), atoi(config[6].value)}; //store ports in int array
+
+
+    //Pre-Probing TCP Connection Phase
     char *placeholder = est_TCP(buffer, port, addr, pre_post, 0); //placeholder is never used, is assigned a NULL value, 0 is placeholder
 
-    //Probing Phase
 
+
+
+    //Probing Phase
     send_UDP(config); //only one parameter, passing entire JSON struct array
 
-    //Post-Probing TCP Connection Phase
-        
-        //establish same tcp connection with same function call, same parameters,
-        //but this time server will return msg
-        pre_post = 0;
-        //establish post-Probe TCP connection, here, the client will receive a message from the server, stored in res
-        char *res = est_TCP(NULL, port, addr, pre_post, atoi(config[11].value)); //atoi value is server_wait_time
+
+
+    pre_post = 0;
+    //Post-Probing TCP Connection Phase (this time client receives message, receives only necessary input to detect network compression)
+    char *res = est_TCP(NULL, port, addr, pre_post, atoi(config[11].value)); //atoi value is server_wait_time
+       
         //compression converts char to int using ASCII manipulation
         int compression = res[0] - 48; //based on msg, if (res == 0, printf("No compression detected")), if res == 1, then yes compression
         if (compression) 
             printf("FINAL: Network compression detected!\n");
         else    
             printf("FINAL: Network compression NOT detected!\n");
-        free(res);
+    
 
     //DONE with pt 1!
+    free(res); //freeing, dereferencing memory locations
     cJSON_Delete(json);
     return 0;
 }
 
-char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int server_wait_time) {
-    if (!pre_post) {
+/***
+ * est_TCP makes a socket, fills the necessary info to send a message to a server, and either sends or receives a buffer through TCP 
+ *  connection
+ * BUFFER is the buffer to be sent to the server.if it's in post-probe phase, then BUFFER is NULL
+ * PORT is the dest UDP port, located in the config file json struct array
+ * ADDR is the server IP address
+ * pre_post indicates whether we're in pre-probe or post-probe. if pre_post == 0, then pre-probe, if pre_post == 1, then post-probe
+ * server_wait_time is my inter_time replacement, in a sense. server.c's recvfrom() has a timeout of only 0.5 seconds, so the client 
+ *  is free to send its payload trains relatively fast, regardless of whether packets get lost or not
+ * returns a char array that is the message from the server. if pre_post == 0, then returns a NULL char array, not used
+*/
+char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int server_wait_time) 
+{
+    //initial sleep, to basically let server and client match up, all sending and receiving will be done in similar time intervals
+    if (!pre_post) 
         sleep(server_wait_time);
-    }
     //create socket, basic error handling
     int sockfd;
-    if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_STREAM, 0)) == -1) 
+    {
 	    printf("ERROR opening socket\n");
-        exit(0);
+        exit(EXIT_FAILURE);
     }
     
     //fill struct with server info
     struct sockaddr_in server_addr;
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family = AF_INET;
-    //if pre_post, then pre-Probe, if !pre_post, then post-Probe phase
+    //if pre_post, then pre-Probe, if !pre_post, then post-Probe phase (depending on the ports that are used, 7777 vs 6666)
     if (pre_post)
         server_addr.sin_port = htons(PORT[0]);
     else
         server_addr.sin_port = htons(PORT[1]);
-    if (!(inet_pton(AF_INET, ADDR, &(server_addr.sin_addr)) > 0)) {
-        printf("client.c 148: ERROR assigning address to socket\n");
+    if (!(inet_pton(AF_INET, ADDR, &(server_addr.sin_addr)) > 0)) 
+    {
+        printf("client.c 166: ERROR assigning address to socket\n");
         exit(EXIT_FAILURE);
     }
 
     //error handling, try to connect with the server
-    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) {
-        printf("client.c 154: ERROR connecting with the server using socket!\n");
-        exit(0);
+    if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) != 0) 
+    {
+        printf("client.c 172: ERROR connecting with the server using socket!\n");
+        exit(EXIT_FAILURE);
     }
     else
         printf("Connected to server!\n");
 
     //sending/receiving messages here
     //if pre_post is 1, then in pre_probing phase, client sends data (json), if pre_post is 0, then in post_probe, server returns data
-    if (pre_post) {
-        int count1 = send(sockfd, BUFFER, BUFFER_MAX, 0);
-        if (count1 == -1) {
+    if (pre_post) 
+    {
+        int count1 = send(sockfd, BUFFER, BUFFER_MAX, 0); // sending JSON data
+        if (count1 == -1)
+        {
             printf("error sending message to server\n");
-            exit(0);
+            exit(EXIT_FAILURE);
         }
         else 
             printf("Sent message to server!\n");
     }
-    else {
+    else 
+    {
         char *msg = (char *) malloc(sizeof(char) * BUFFER_MAX);
         int count2 = recv(sockfd, msg, BUFFER_MAX, 0);
-        if (count2 == -1) {
+        if (count2 == -1) 
+        {
             printf("error receiving message from server\n");
             exit(0);
         }
@@ -182,22 +205,33 @@ char *est_TCP(const char *BUFFER, int *PORT, char *ADDR, int pre_post, int serve
         return msg;
     }
 
+    //closing socket
     close(sockfd);
     //base case
     return NULL;
 }
 
-void send_UDP (jsonLine *items) { 
-    //create socket
+
+
+/***
+ * send_UDP handles the whole probing phase. It creates a socket and immediately sends the low entropy payload,
+ *  then sends the high entropy payload after giving the server time to catch up
+ * items is a jsonLine array consisting of all infro from config.json
+*/
+void send_UDP (jsonLine *items) 
+{ 
+    //create socket, basic error handling
     int sockfd;
-    if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+    if ((sockfd = socket(PF_INET, SOCK_DGRAM, 0)) == -1) 
+    {
         printf("Error making UDP socket\n");
         exit(EXIT_FAILURE);
     }
 
-    //set DF bit
-    int dfval = IP_PMTUDISC_DO; //linux df bit
-    if (setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dfval, sizeof(dfval)) < 0) { //if linux, use IP_MTU_DISCOVER & IP_PMTUDISC_DO
+    //set DF bit, basic error handling
+    int dfval = IP_PMTUDISC_DO; //linux df bit, on Mac OSes, DF bit is IP_DONTFRAG, but we are using Ubuntu (Linux)
+    if (setsockopt(sockfd, IPPROTO_IP, IP_MTU_DISCOVER, &dfval, sizeof(dfval)) < 0) 
+    { //if linux, use IP_MTU_DISCOVER & IP_PMTUDISC_DO
         printf("error with setting don't fragment bit\n");
         exit(EXIT_FAILURE);
     }
@@ -206,30 +240,29 @@ void send_UDP (jsonLine *items) {
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;
-    sin.sin_port = htons(atoi(items[2].value));
-    if (!(inet_pton(AF_INET, items[0].value, &(sin.sin_addr)) > 0)) {
-        printf("client.c 209: ERROR assigning address to socket\n");
+    sin.sin_port = htons(atoi(items[2].value)); //dst port is always the same here
+    if (!(inet_pton(AF_INET, items[0].value, &(sin.sin_addr)) > 0)) 
+    {
+        printf("client.c 243: ERROR assigning address to socket\n");
         exit(EXIT_FAILURE);
     }
 
-    printf("Set server info (struct sockaddr_in stuff lmao)!\n");
+    printf("Set server info, preparing to send payloads!\n");
 
     //initialize necessary variables
     int packet_size = atoi(items[7].value);
     int train_size = atoi(items[9].value);
     int inter_time = atoi(items[8].value) * 1000;
+    int server_wait_time = atoi(items[11].value);
     //fill buffer with 1000 0s
     char low_entropy_BUFFER[packet_size];
     memset(low_entropy_BUFFER, 0, packet_size);
-    //first time, set timer with inter_time
-            //while timer isn't == inter_time (or packet count != 6000), run while loop
-            //to make and send UDP packets with all 0s buffer 
-    int server_wait_time = atoi(items[11].value);
 
-    //basic timer
+    //LOW ENTROPY PAYLOAD
         printf("Sending low entropy payload!\n");
         int pak_count = 0;
-        do {
+        do 
+        {
             //send UDP packet (6000 times haha)
             //setting packet ID
             low_entropy_BUFFER[0] = pak_count & 0xFF;
@@ -237,24 +270,26 @@ void send_UDP (jsonLine *items) {
             if (sendto(sockfd, low_entropy_BUFFER, packet_size, 0, (struct sockaddr *)&sin, sizeof(sin)) < 0) 
                 printf("packet failed to send\n");
             pak_count++;
-        } while (pak_count <= train_size);
+        } while (pak_count <= train_size); //sending 6000 of the same packet, only difference is incrementing packet id
         printf("Low entropy payload sent!\n");
 
 
     sleep(server_wait_time);
-    //second time, restart before timer and new difference timer
+    //HIGH ENTROPY PAYLOAD
         //make random packet_data using random_file in ../dir
         char high_entropy_BUFFER[packet_size];
         FILE *fp;
-        if ((fp = fopen("../random_file", "rb")) == NULL) {
+        if ((fp = fopen("../random_file", "rb")) == NULL) 
+        {
             printf("error opening file\n");
         }
         fread(high_entropy_BUFFER, sizeof(char), packet_size, fp);
         fclose(fp);
         
         printf("Sending high entropy payload\n"); 
-        pak_count = 0;
-        do {
+        pak_count = 0; //resetting the packet id
+        do 
+        {
             //setting packet ID
             high_entropy_BUFFER[0] = pak_count & 0xFF;
             high_entropy_BUFFER[1] = pak_count & 0xFF;
@@ -264,13 +299,23 @@ void send_UDP (jsonLine *items) {
             pak_count++;
         } while (pak_count <= train_size);
         printf("High entropy payload sent!\n");
+
+    //close the socket
     close(sockfd);
 }
 
-cJSON *JSONObj(char *input[]) {
-    // open the file 
+
+/***
+ * JSONObj simply creates the JSON object needed to make calls to my config.json file. 
+ * input is the command line argument argv, used to identify filename config.json
+ * returns a root of type cJSON, which can be used to access config.json
+*/
+cJSON *JSONObj(char *input[]) 
+{
+    // open the file, basic error handling
     FILE *fp = fopen(input[1], "r"); 
-    if (fp == NULL) { 
+    if (fp == NULL) 
+    { 
         printf("Error: Unable to open the file.\n"); 
         exit(EXIT_FAILURE); 
     } 
@@ -282,7 +327,8 @@ cJSON *JSONObj(char *input[]) {
 
     // parse the JSON data 
     cJSON *json = cJSON_Parse(buffer); 
-    if (json == NULL) { 
+    if (json == NULL) 
+    { //basic error handling
         const char *error_ptr = cJSON_GetErrorPtr(); 
         if (error_ptr != NULL) { 
             printf("Error: %s\n", error_ptr); 
@@ -290,6 +336,6 @@ cJSON *JSONObj(char *input[]) {
         cJSON_Delete(json); 
         exit(EXIT_FAILURE);
     } 
-
+    //return the json object with the parsed JSON data
     return json;
 }
