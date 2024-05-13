@@ -131,6 +131,18 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT)
         addr.sin_port = htons(POST_PORT);
 
 
+    //using setsockopt to reuse address and port in case prior crashes happen, since socket is bound for a certain time after crashing
+    int opt = 1;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt))<0) 
+    {
+        printf("couldn't setsockopt to reuse ADDR\n");
+        exit(EXIT_FAILURE);
+    }
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEPORT, (char *)&opt, sizeof(opt))<0)   
+    {
+        printf("couldn't setsockopt to reuse PORT\n");
+        exit(EXIT_FAILURE);
+    }
 
     //bind socket, basic error handling
     if (bind(sockfd, (struct sockaddr *)&addr, sizeof(addr)) < 0) 
