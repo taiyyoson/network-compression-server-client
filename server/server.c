@@ -123,7 +123,7 @@ char *est_TCP(int pre_post, int detect, int PRE_PORT, int POST_PORT)
     //filling server info, will use to bind socket
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = inet_addr("192.168.128.5");
+    addr.sin_addr.s_addr = INADDR_ANY;
     //pre_post determines TCP_port PREPROB or POSTPROB
     if (pre_post)
         addr.sin_port = htons(PRE_PORT);
