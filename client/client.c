@@ -236,6 +236,19 @@ void send_UDP (jsonLine *items)
         exit(EXIT_FAILURE);
     }
 
+    //struct for client info
+    struct sockaddr_in clientsin;
+    memset(&clientsin, 0, sizeof(clientsin));
+    clientsin.sin_family = AF_INET;
+    clientsin.sin_port = htons(atoi(items[1].value)); //setting UDP src port
+    clientsin.sin_addr.s_addr = INADDR_ANY; //set to any address, client is sending UDP data, not receiving, so doesn't matter
+
+    //bind socket, basic error handling (so client knows which port to send UDP from)
+    if (bind(sockfd, (struct sockaddr *)&clientsin, sizeof(clientsin)) < 0) 
+    {
+        printf("couldn't bind socket to UDP src port!\n");
+        exit(EXIT_FAILURE);
+    }
     //fill server info
     struct sockaddr_in sin;
     memset(&sin, 0, sizeof(sin));
